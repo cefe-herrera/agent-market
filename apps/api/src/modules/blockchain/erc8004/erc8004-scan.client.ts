@@ -212,6 +212,7 @@ export class Erc8004ScanClient {
     );
   }
 
+  
   private async throttledFetch(url: string): Promise<Response> {
     const hasApiKey = Boolean(this.getApiKey());
     const defaultIntervalMs = hasApiKey ? 2100 : 6500;

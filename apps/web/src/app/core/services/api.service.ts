@@ -15,6 +15,7 @@ import {
   PerformanceChartPoint,
   MarketplaceStats,
 } from '@bnb-marketplace/shared-types';
+import { environment } from '../../../environments/environment';
 
 export interface PaginatedResponse<T> {
   data: T[];
@@ -25,7 +26,7 @@ export interface PaginatedResponse<T> {
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private readonly baseUrl = 'http://localhost:3000';
+  private readonly baseUrl = environment.apiUrl;
 
   constructor(private readonly http: HttpClient) {}
 
