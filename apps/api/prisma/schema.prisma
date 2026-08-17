@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AgentStatus {
+  DISCOVERED
+  LISTED
+  VERIFIED
+  INACTIVE
+}
+
+enum AgentSource {
+  MARKETPLACE_SEED
+  BNB_AGENT_STUDIO
+  ERC8004
+}
+
+enum AgentCategory {
+  REBALANCING
+  GRID_TRADING
+  YIELD_OPTIMISATION
+  HEALTH_FACTOR_MONITORING
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  VERY_HIGH
+}
+
+enum PermissionType {
+  SWAP
+  TRANSFER
+  SUPPLY
+  WITHDRAW
+  BORROW
+  REPAY
+  ADD_LIQUIDITY
+  REMOVE_LIQUIDITY
+  REBALANCE
+}
+
+enum HireStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  REVOKED
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id            String   @id @default(uuid())
+  walletAddress String   @unique @map("wallet_address")
+  displayName   String?  @map("display_name")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  hires AgentHire[]
+
+  @@map("users")
+}
+
+model Agent {
+  id                  String        @id @default(uuid())
+  agentId             String        @unique @map("agent_id")
+  name                String
+  slug                String        @unique
+  description         String        @db.Text
+  shortDescription    String        @map("short_description")
+  imageUrl            String?       @map("image_url")
+  ownerWallet         String        @map("owner_wallet")
+  agentWallet         String        @map("agent_wallet")
+  agentUri            String?       @map("agent_uri")
+  network             String        @default("BNB Chain")
+  chainId             Int           @default(56) @map("chain_id")
+  isTestnet           Boolean       @default(false) @map("is_testnet")
+  source              AgentSource   @default(MARKETPLACE_SEED)
+  publishedAt         DateTime?     @map("published_at")
+  status              AgentStatus   @default(LISTED)
+  verified            Boolean       @default(false)
+  category            AgentCategory
+  protocols           String[]
+  supportedAssets     String[]      @map("supported_assets")
+  strategyName        String        @map("strategy_name")
+  strategyDescription String        @map("strategy_description") @db.Text
+  riskLevel           RiskLevel     @map("risk_level")
+  minimumCapital      Float         @map("minimum_capital")
+  recommendedCapital  Float         @map("recommended_capital")
+  executionFrequency  String        @map("execution_frequency")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+
+  metrics     AgentMetrics?
+  permissions AgentPermission[]
+  hires       AgentHire[]
+
+  @@index([category])
+  @@index([riskLevel])
+  @@index([verified])
+  @@index([source])
+  @@index([chainId])
+  @@index([isTestnet])
+  @@map("agents")
+}
+
+model AgentMetrics {
+  id                    String   @id @default(uuid())
+  agentId               String   @unique @map("agent_id")
+  aum                   Float    @default(0)
+  managedVolume         Float    @default(0) @map("managed_volume")
+  totalExecutions       Int      @default(0) @map("total_executions")
+  successfulExecutions  Int      @default(0) @map("successful_executions")
+  failedExecutions      Int      @default(0) @map("failed_executions")
+  successRate           Float    @default(0) @map("success_rate")
+  return7d              Float    @default(0) @map("return_7d")
+  return30d             Float    @default(0) @map("return_30d")
+  return90d             Float    @default(0) @map("return_90d")
+  maxDrawdown30d        Float    @default(0) @map("max_drawdown_30d")
+  averageExecutionTime  Float    @default(0) @map("average_execution_time")
+  averageGasCost        Float    @default(0) @map("average_gas_cost")
+  uptime                Float    @default(0)
+  uniqueUsers           Int      @default(0) @map("unique_users")
+  totalRevenue          Float    @default(0) @map("total_revenue")
+  categoryMetrics       Json     @default("{}") @map("category_metrics")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@map("agent_metrics")
+}
+
+model AgentPermission {
+  id              String         @id @default(uuid())
+  agentId         String         @map("agent_id")
+  permissionType  PermissionType @map("permission_type")
+  contractAddress String?        @map("contract_address")
+  protocol        String?
+  spendLimit      Float?         @map("spend_limit")
+  spendAsset      String?        @map("spend_asset")
+  expiration      DateTime?
+  description     String
+  allowed         Boolean        @default(true)
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@map("agent_permissions")
+}
+
+model AgentHire {
+  id          String     @id @default(uuid())
+  agentId     String     @map("agent_id")
+  userWallet  String     @map("user_wallet")
+  amount      Float
+  asset       String
+  status      HireStatus @default(PENDING)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  activatedAt DateTime?  @map("activated_at")
+  cancelledAt DateTime?  @map("cancelled_at")
+
+  agent Agent @relation(fields: [agentId], references: [id])
+  user  User  @relation(fields: [userWallet], references: [walletAddress])
+
+  @@index([userWallet])
+  @@index([agentId])
+  @@map("agent_hires")
+}

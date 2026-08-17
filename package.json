@@ -1,0 +1,23 @@
+{
+  "name": "bnb-agent-marketplace",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "npm run build --workspace=@bnb-marketplace/shared-types && npm run dev --workspace=@bnb-marketplace/api",
+    "dev:web": "npm run start --workspace=@bnb-marketplace/web",
+    "build": "npm run build --workspace=@bnb-marketplace/shared-types && npm run build --workspace=@bnb-marketplace/api && npm run build --workspace=@bnb-marketplace/web",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run prisma:migrate --workspace=@bnb-marketplace/api",
+    "db:setup": "npm run db:up && npm run db:migrate",
+    "test": "npm run test --workspace=@bnb-marketplace/api && npm run test --workspace=@bnb-marketplace/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
