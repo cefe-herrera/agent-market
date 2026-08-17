@@ -207,7 +207,7 @@ export class Erc8004ScanClient {
 
   private getApiKey(): string | undefined {
     return (
-      this.config.get<string>('8004SCAN_API_KEY') ??
+      this.config.get<string>('LATEST_8004SCAN_API_KEY') ??
       this.config.get<string>('ERC8004_SCAN_API_KEY')
     );
   }
@@ -216,7 +216,7 @@ export class Erc8004ScanClient {
     const hasApiKey = Boolean(this.getApiKey());
     const defaultIntervalMs = hasApiKey ? 2100 : 6500;
     const minIntervalMs = Number(
-      this.config.get('8004SCAN_MIN_INTERVAL_MS', String(defaultIntervalMs)),
+      this.config.get('LATEST_8004SCAN_MIN_INTERVAL_MS', String(defaultIntervalMs)),
     );
     const elapsed = Date.now() - this.lastRequestAt;
     if (elapsed < minIntervalMs) {
