@@ -1,0 +1,17 @@
+{
+  "name": "BNB Agent Marketplace",
+  "user": "ubuntu",
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "npm run dev",
+      "description": "Runs the NestJS API (:3000) and Angular web app (:4200) together via concurrently."
+    }
+  ],
+  "ports": [
+    { "name": "api", "port": 3000 },
+    { "name": "web", "port": 4200 }
+  ]
+}
