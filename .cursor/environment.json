@@ -6,8 +6,8 @@
   "terminals": [
     {
       "name": "dev",
-      "command": "npm run dev",
-      "description": "Runs the NestJS API (:3000) and Angular web app (:4200) together via concurrently."
+      "command": "bash .cursor/start.sh && npm run dev",
+      "description": "Ensures PostgreSQL is up, then runs the NestJS API (:3000) and Angular web app (:4200) together via concurrently."
     }
   ],
   "ports": [
