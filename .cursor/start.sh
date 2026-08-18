@@ -15,6 +15,13 @@ PG_VER="$(ls /usr/lib/postgresql | sort -n | tail -1)"
 
 echo "==> Starting PostgreSQL cluster ${PG_VER}/main"
 if ! pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
+  # Clear a stale postmaster.pid left by a snapshot where the server was not
+  # shut down cleanly; safe because the server is confirmed not accepting
+  # connections above.
+  PIDFILE="/var/lib/postgresql/${PG_VER}/main/postmaster.pid"
+  if [ -f "$PIDFILE" ]; then
+    sudo rm -f "$PIDFILE" || true
+  fi
   sudo pg_ctlcluster "${PG_VER}" main start || true
 fi
 for _ in $(seq 1 30); do

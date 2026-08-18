@@ -60,4 +60,9 @@ echo "==> Applying database migrations"
 export DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5432/${DB_NAME}?schema=public"
 npm run prisma:migrate:deploy --workspace=@bnb-marketplace/api
 
+# Stop PostgreSQL so a build snapshot does not capture a stale postmaster.pid.
+# The per-boot start.sh brings it back up cleanly.
+echo "==> Stopping PostgreSQL cluster for a clean snapshot"
+sudo pg_ctlcluster "${PG_VER}" main stop || true
+
 echo "==> install.sh complete"
