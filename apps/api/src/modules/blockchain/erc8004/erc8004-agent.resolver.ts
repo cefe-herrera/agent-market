@@ -1,16 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { MarketplaceAgentDto } from '@bnb-marketplace/shared-types';
 import { Erc8004ScanClient } from './erc8004-scan.client';
+import { A2aHealthClient } from './a2a-health.client';
 import {
   buildChainMap,
   fallbackChain,
   mapScanDetailToMarketplaceAgent,
+  scanA2aEndpoint,
+  withA2aHealth,
 } from './erc8004-agent.mapper';
 import { slugifyAgentName } from '../../agents/agent-studio.mapper';
 
 @Injectable()
 export class Erc8004AgentResolver {
-  constructor(private readonly scan: Erc8004ScanClient) {}
+  constructor(
+    private readonly scan: Erc8004ScanClient,
+    private readonly a2a: A2aHealthClient,
+  ) {}
 
   async resolveByIdOrSlug(idOrSlug: string): Promise<MarketplaceAgentDto | null> {
     const parsed = this.parseAgentId(idOrSlug);
@@ -39,7 +45,9 @@ export class Erc8004AgentResolver {
 
     const chainMap = buildChainMap(chains);
     const chain = chainMap.get(detail.chain_id) ?? fallbackChain(detail.chain_id);
-    return mapScanDetailToMarketplaceAgent(detail, chain);
+    const dto = mapScanDetailToMarketplaceAgent(detail, chain);
+    const live = await this.a2a.probe(scanA2aEndpoint(detail));
+    return withA2aHealth(dto, live);
   }
 
   private async resolveChainIdForToken(

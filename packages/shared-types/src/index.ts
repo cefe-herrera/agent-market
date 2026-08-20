@@ -134,9 +134,23 @@ export interface AgentHireDto {
   agent?: AgentDto;
 }
 
+export interface A2aHealthDto {
+  endpoint: string | null;
+  healthy: boolean;
+  status: 'healthy' | 'unhealthy' | 'unknown' | 'missing';
+  latencyMs: number | null;
+  checkedAt: string;
+  error: string | null;
+  skills: string[];
+  x402Support: boolean | null;
+  name?: string | null;
+  description?: string | null;
+}
+
 export interface MarketplaceAgentDto extends AgentDto {
   metrics?: AgentMetricsDto;
   marketplaceScore?: number;
+  a2a?: A2aHealthDto;
 }
 
 export interface CompareAgentDto extends MarketplaceAgentDto {

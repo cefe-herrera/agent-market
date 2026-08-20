@@ -10,7 +10,7 @@ import { EventsModule } from '../../common/events/events.module';
 
 @Module({
   imports: [AnalyticsModule, SecurityModule, BlockchainModule, EventsModule],
-  controllers: [AgentsController, AgentsStudioController],
+  controllers: [AgentsStudioController, AgentsController],
   providers: [AgentsService, AgentDiscoveryService],
   exports: [AgentsService, AgentDiscoveryService],
 })

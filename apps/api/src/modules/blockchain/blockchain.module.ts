@@ -6,6 +6,7 @@ import { Erc8004RegistryProvider } from './providers/erc8004-registry.provider';
 import { Erc8004ScanClient } from './erc8004/erc8004-scan.client';
 import { Erc8004AgentResolver } from './erc8004/erc8004-agent.resolver';
 import { Erc8004ReputationClient } from './erc8004/erc8004-reputation.client';
+import { A2aHealthClient } from './erc8004/a2a-health.client';
 
 @Module({
   imports: [ConfigModule],
@@ -13,6 +14,7 @@ import { Erc8004ReputationClient } from './erc8004/erc8004-reputation.client';
     Erc8004ScanClient,
     Erc8004AgentResolver,
     Erc8004ReputationClient,
+    A2aHealthClient,
     MockAgentRegistryProvider,
     Erc8004RegistryProvider,
     {
@@ -35,6 +37,7 @@ import { Erc8004ReputationClient } from './erc8004/erc8004-reputation.client';
     Erc8004ScanClient,
     Erc8004AgentResolver,
     Erc8004ReputationClient,
+    A2aHealthClient,
   ],
 })
 export class BlockchainModule {}

@@ -1,29 +1,33 @@
 import { NextResponse } from "next/server";
 import { usdcExactRequirements } from "@/app/lib/x402-usdc";
-import { AGENT_ID, agentCaip } from "@/app/lib/erc8004";
+import { getDemoSeller } from "@/app/lib/demo-agents";
+import { resolvePaidWork } from "@/app/lib/agent-work";
 
 const FACILITATOR_URL = (
   process.env.FACILITATOR_URL ?? "http://127.0.0.1:8080"
 ).replace(/\/$/, "");
 
-function paymentRequired(url: string) {
+function paymentRequired(url: string, sellerId?: string | null) {
+  const demo = getDemoSeller(sellerId);
   const accepts = [usdcExactRequirements()];
   return {
     x402Version: 2,
     error: "PAYMENT-SIGNATURE required — exact $U EIP-3009 on eip155:97",
     resource: {
       url,
-      description: "Latam Market Pay — x402 seller (BSC testnet $U)",
+      description: demo
+        ? `${demo.name} — x402 seller (BSC testnet $U)`
+        : "Latam Market Pay — x402 seller (BSC testnet $U)",
       mimeType: "application/json",
-      serviceName: "LatamMarketPay",
+      serviceName: demo?.agentId ?? sellerId ?? "LatamMarketPay",
       tags: ["x402", "erc8004", "bnb"],
     },
     accepts,
     extensions: {
       erc8004: {
         info: {
-          agentId: AGENT_ID || null,
-          caip: AGENT_ID ? agentCaip(AGENT_ID) : null,
+          agentId: sellerId ?? null,
+          name: demo?.name ?? null,
         },
         schema: { type: "object" },
       },
@@ -47,12 +51,42 @@ async function postFacilitator(path: "/verify" | "/settle", body: unknown) {
   return { ok: res.ok, status: res.status, json, text };
 }
 
+function paymentAddresses(body: unknown): { payer?: string; payTo?: string } {
+  const typed = body as {
+    paymentPayload?: {
+      payload?: { authorization?: { from?: string; to?: string } };
+    };
+    paymentRequirements?: { payTo?: string };
+  };
+  return {
+    payer: typed.paymentPayload?.payload?.authorization?.from,
+    payTo:
+      typed.paymentRequirements?.payTo ??
+      typed.paymentPayload?.payload?.authorization?.to,
+  };
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  return NextResponse.json(paymentRequired(url.toString()), { status: 402 });
+  return NextResponse.json(
+    paymentRequired(url.toString(), url.searchParams.get("seller")),
+    { status: 402 },
+  );
 }
 
 export async function POST(request: Request) {
+  const agentId = request.headers.get("x-agent-id");
+  const agentName = request.headers.get("x-agent-name");
+  if (!agentId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Elegí un agente del catálogo (demo o indexador).",
+      },
+      { status: 400 },
+    );
+  }
+
   const body = await request.json();
   const verified = await postFacilitator("/verify", body);
   const verifyJson = verified.json as { isValid?: boolean; payer?: string };
@@ -87,16 +121,21 @@ export async function POST(request: Request) {
     );
   }
 
+  const { payer, payTo } = paymentAddresses(body);
+  const work = await resolvePaidWork({
+    agentId,
+    agentName,
+    payer: settleJson.payer ?? verifyJson.payer ?? payer,
+    payTo,
+    settleTx: settleJson.transaction,
+  });
+
   return NextResponse.json({
     success: true,
     transaction: settleJson.transaction,
-    payer: settleJson.payer ?? verifyJson.payer,
+    payer: settleJson.payer ?? verifyJson.payer ?? payer,
     network: settleJson.network,
-    agentId: AGENT_ID || null,
-    work: {
-      message: "Latam Market Pay executed",
-      quote: "BNB testnet x402 exact · $U · EIP-3009",
-      at: new Date().toISOString(),
-    },
+    agentId,
+    work,
   });
 }

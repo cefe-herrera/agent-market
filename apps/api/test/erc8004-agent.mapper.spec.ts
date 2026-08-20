@@ -89,6 +89,13 @@ describe('erc8004-agent.mapper', () => {
       average_score: 4.2,
       rank: 12,
       x402_supported: true,
+      a2a_endpoint: 'https://example.com/.well-known/agent-card.json',
+      health_status: {
+        services: {
+          a2a: { status: 'unhealthy', latency_ms: 6006, message: 'Timed out after 6s' },
+        },
+        checked_at: '2026-08-20T07:55:17.033561+00:00',
+      },
       raw_metadata: {
         offchain_uri: 'erc8004://56/269020',
       },
@@ -107,5 +114,9 @@ describe('erc8004-agent.mapper', () => {
     expect(dto.metrics?.successfulExecutions).toBe(8);
     expect(dto.metrics?.successRate).toBe(80);
     expect(dto.metrics?.categoryMetrics['healthScore']).toBe(85);
+    expect(dto.a2a?.healthy).toBe(false);
+    expect(dto.a2a?.status).toBe('unhealthy');
+    expect(dto.a2a?.endpoint).toContain('agent-card.json');
+    expect(dto.supportedAssets).toEqual(['U']);
   });
 });

@@ -1,4 +1,5 @@
 import {
+  A2aHealthDto,
   AgentCategory,
   AgentSource,
   AgentStatus,
@@ -12,7 +13,35 @@ import type {
   Scan8004ListItem,
   Scan8004MetricsPayload,
 } from './erc8004.types';
+import { emptyA2aHealth, a2aMetrics } from './a2a-health';
 import { slugifyAgentName } from '../../agents/agent-studio.mapper';
+
+export function scanA2aEndpoint(detail: Scan8004AgentDetail): string | null {
+  return detail.a2a_endpoint ?? detail.services?.a2a?.endpoint ?? null;
+}
+
+export function scanA2aStatus(
+  detail: Scan8004AgentDetail,
+): A2aHealthDto['status'] {
+  const status = detail.health_status?.services?.a2a?.status?.toLowerCase();
+  if (status === 'healthy') return 'healthy';
+  if (status === 'unhealthy' || status === 'degraded') return 'unhealthy';
+  if (!scanA2aEndpoint(detail)) return 'missing';
+  return 'unknown';
+}
+
+export function scanA2aHealthy(detail: Scan8004AgentDetail): boolean {
+  return scanA2aStatus(detail) === 'healthy';
+}
+
+export function mapScanA2aHealth(detail: Scan8004AgentDetail): A2aHealthDto {
+  const status = scanA2aStatus(detail);
+  return emptyA2aHealth(scanA2aEndpoint(detail), status, {
+    latencyMs: detail.health_status?.services?.a2a?.latency_ms ?? null,
+    checkedAt: detail.health_status?.checked_at ?? detail.health_checked_at ?? new Date().toISOString(),
+    error: detail.health_status?.services?.a2a?.message ?? null,
+  });
+}
 
 export function isLikelyBnbAgentStudioListItem(item: Scan8004ListItem): boolean {
   const text = `${item.name} ${item.description ?? ''}`.toLowerCase();
@@ -133,6 +162,9 @@ export function mapScanMetrics(detail: Scan8004AgentDetail): Scan8004MetricsPayl
       x402Supported: detail.x402_supported,
       isActive: detail.is_active,
       a2aLatencyMs: a2aLatency,
+      a2aEndpoint: scanA2aEndpoint(detail),
+      a2aStatus: scanA2aStatus(detail),
+      a2aHealthy: scanA2aHealthy(detail),
       agentId8004: detail.agent_id,
     },
   };
@@ -202,6 +234,26 @@ export function mapScanDetailToMarketplaceAgent(
     updatedAt: detail.updated_at ?? detail.created_at,
     metrics: mapScanMetricsToAgentMetricsDto(detail),
     marketplaceScore: detail.total_score ?? 0,
+    a2a: mapScanA2aHealth(detail),
+  };
+}
+
+export function withA2aHealth(
+  dto: MarketplaceAgentDto,
+  health: A2aHealthDto,
+): MarketplaceAgentDto {
+  return {
+    ...dto,
+    a2a: health,
+    metrics: dto.metrics
+      ? {
+          ...dto.metrics,
+          categoryMetrics: {
+            ...dto.metrics.categoryMetrics,
+            ...a2aMetrics(health),
+          },
+        }
+      : dto.metrics,
   };
 }
 
@@ -233,7 +285,7 @@ export function mapScanListItemToMarketplaceAgent(
     verified: item.is_verified ?? false,
     category: inferAgentCategory(item.name, description),
     protocols,
-    supportedAssets: item.x402_supported ? ['USDT', 'ETH'] : ['ETH'],
+    supportedAssets: item.x402_supported ? ['U'] : [],
     strategyName: item.name,
     strategyDescription: description || item.name,
     riskLevel: RiskLevel.MEDIUM,
@@ -332,7 +384,7 @@ export function mapScanAgentToExternal(
     shortDescription: description.slice(0, 160) || detail.name,
     category: inferAgentCategory(detail.name, description),
     protocols: mapScanProtocols(detail),
-    supportedAssets: detail.x402_supported ? ['USDT', 'ETH'] : ['ETH'],
+    supportedAssets: detail.x402_supported ? ['U'] : [],
     strategyName: detail.name,
     strategyDescription:
       description +

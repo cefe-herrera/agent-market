@@ -5,46 +5,47 @@ import { zeroHash } from "viem";
 import { useReadContract, useWriteContract } from "wagmi";
 import { useWalletReady } from "@/app/context/hooks/useWalletReady";
 import {
-  AGENT_ID,
   BSC_TESTNET_CHAIN_ID,
   IDENTITY_REGISTRY,
   REPUTATION_REGISTRY,
   identityAbi,
   reputationAbi,
   isSameAddress,
+  parseTokenId,
 } from "@/app/lib/erc8004";
 
 export default function FeedbackButton({
   enabled,
-  agentId = AGENT_ID,
+  agentId,
 }: {
   enabled: boolean;
-  agentId?: number;
+  agentId: string;
 }) {
   const { account, chainId } = useWalletReady();
   const [error, setError] = useState<string | null>(null);
   const [hash, setHash] = useState<string | null>(null);
   const { writeContractAsync, isPending } = useWriteContract();
+  const tokenId = parseTokenId(agentId);
 
   const { data: owner } = useReadContract({
     address: IDENTITY_REGISTRY,
     abi: identityAbi,
     functionName: "ownerOf",
-    args: agentId ? [BigInt(agentId)] : undefined,
+    args: tokenId ? [BigInt(tokenId)] : undefined,
     chainId: BSC_TESTNET_CHAIN_ID,
-    query: { enabled: Boolean(agentId) },
+    query: { enabled: Boolean(tokenId) },
   });
 
   const selfFeedback = isSameAddress(account, owner as `0x${string}` | undefined);
   const ready =
     enabled &&
     Boolean(account) &&
-    Boolean(agentId) &&
+    Boolean(tokenId) &&
     chainId === BSC_TESTNET_CHAIN_ID &&
     !selfFeedback;
 
   async function onFeedback() {
-    if (!agentId) return;
+    if (!tokenId) return;
     setError(null);
     setHash(null);
     try {
@@ -53,12 +54,12 @@ export default function FeedbackButton({
         abi: reputationAbi,
         functionName: "giveFeedback",
         args: [
-          BigInt(agentId),
+          BigInt(tokenId),
           BigInt(100),
           0,
           "x402",
           "quality",
-          `${window.location.origin}/api/agent/resource`,
+          `${window.location.origin}/api/agent/resource?seller=${encodeURIComponent(agentId)}`,
           "",
           zeroHash,
         ],
@@ -70,34 +71,35 @@ export default function FeedbackButton({
     }
   }
 
-  if (!agentId) {
-    return (
-      <p className="text-xs text-zinc-500">
-        Registrá el agente (`forge script RegisterAgent`) y poné{" "}
-        <code>NEXT_PUBLIC_AGENT_ID</code> para dejar reputación ERC-8004.
-      </p>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-2">
       <p className="font-mono text-[11px] text-zinc-500">
-        agent #{agentId} · owner {owner ? String(owner) : "…"}
+        agentId {agentId}
+        {tokenId ? ` · ERC-8004 #${tokenId}` : ""}
+        {owner ? ` · owner ${String(owner)}` : ""}
       </p>
+      {!tokenId && (
+        <p className="text-xs text-zinc-500">
+          Este seller usa id dinámico de catálogo. Feedback on-chain queda
+          para cuando el agente tenga token ERC-8004.
+        </p>
+      )}
       {selfFeedback && (
         <p className="text-xs text-red-600">
           El registry no deja self-feedback. Conectá una wallet distinta al
           owner y volvé a pagar / puntuar.
         </p>
       )}
-      <button
-        type="button"
-        disabled={!ready || isPending}
-        onClick={onFeedback}
-        className="h-11 rounded-full border border-zinc-300 px-6 text-sm font-semibold disabled:opacity-40"
-      >
-        {isPending ? "Escribí en el registry…" : "Dejar feedback ERC-8004 (100)"}
-      </button>
+      {tokenId > 0 && (
+        <button
+          type="button"
+          disabled={!ready || isPending}
+          onClick={onFeedback}
+          className="h-11 rounded-full border border-zinc-300 px-6 text-sm font-semibold disabled:opacity-40"
+        >
+          {isPending ? "Escribí en el registry…" : "Dejar feedback ERC-8004 (100)"}
+        </button>
+      )}
       {hash && (
         <a
           className="break-all font-mono text-xs text-emerald-600 underline"

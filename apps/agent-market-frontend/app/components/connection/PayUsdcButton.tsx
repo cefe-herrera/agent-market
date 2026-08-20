@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getAddress, isAddress } from "viem";
 import { useWalletReady } from "@/app/context/hooks/useWalletReady";
 import {
@@ -11,16 +11,30 @@ import {
 import {
   signExactUsdcPayment,
 } from "@/app/lib/x402-client";
+import type { AgentWork } from "@/app/lib/agent-work";
 import FeedbackButton from "./FeedbackButton";
 
-export default function PayUsdcButton() {
+export default function PayUsdcButton({
+  selectedPayTo,
+  selectedName,
+  selectedAgentId,
+}: {
+  selectedPayTo?: string | null;
+  selectedName?: string | null;
+  selectedAgentId?: string | null;
+}) {
   const { account, walletClient, isConnected, chainId } = useWalletReady();
   const [status, setStatus] = useState<"idle" | "signing" | "settling">(
     "idle",
   );
   const [error, setError] = useState<string | null>(null);
   const [tx, setTx] = useState<string | null>(null);
+  const [work, setWork] = useState<AgentWork | null>(null);
   const [payToInput, setPayToInput] = useState(X402_PAY_TO);
+
+  useEffect(() => {
+    if (selectedPayTo) setPayToInput(selectedPayTo);
+  }, [selectedPayTo]);
 
   const payTo = useMemo(() => {
     if (!isAddress(payToInput)) return null;
@@ -37,6 +51,7 @@ export default function PayUsdcButton() {
     Boolean(walletClient) &&
     Boolean(payTo) &&
     !selfPay &&
+    Boolean(selectedAgentId) &&
     chainId === BSC_TESTNET_CHAIN_ID;
   const busy = status !== "idle";
 
@@ -44,13 +59,18 @@ export default function PayUsdcButton() {
     if (!account || !walletClient || !payTo) return;
     setError(null);
     setTx(null);
+    setWork(null);
     try {
       setStatus("signing");
       const body = await signExactUsdcPayment(walletClient, account, payTo);
       setStatus("settling");
       const hire = await fetch("/api/agent/resource", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-agent-id": selectedAgentId ?? "",
+          "x-agent-name": selectedName ?? "",
+        },
         body: JSON.stringify(body),
       });
       const result = (await hire.json()) as {
@@ -58,7 +78,7 @@ export default function PayUsdcButton() {
         transaction?: string;
         error?: string;
         details?: unknown;
-        work?: unknown;
+        work?: AgentWork;
       };
       if (!hire.ok || !result.success) {
         const details =
@@ -68,6 +88,7 @@ export default function PayUsdcButton() {
         throw new Error(`${result.error ?? "agent hire failed"}${details}`);
       }
       setTx(result.transaction ?? "ok");
+      if (result.work) setWork(result.work);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -80,6 +101,7 @@ export default function PayUsdcButton() {
       <label className="flex flex-col gap-1 text-xs">
         <span className="uppercase tracking-wider text-zinc-400">
           to · quién recibe el $U
+          {selectedName ? ` · ${selectedName}` : ""}
         </span>
         <input
           value={payToInput}
@@ -113,7 +135,8 @@ export default function PayUsdcButton() {
       </button>
       {!ready && !selfPay && (
         <p className="text-xs text-amber-600">
-          Conectá la wallet en BNB Testnet (97) y poné un `to` distinto.
+          Elegí un agente, conectá la wallet en BNB Testnet (97) y poné un
+          `to` distinto al que firma.
         </p>
       )}
       {error && (
@@ -131,9 +154,21 @@ export default function PayUsdcButton() {
           tx {tx}
         </a>
       )}
-      {tx && (
+      {work && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+          <p className="text-xs font-semibold">{work.agent}</p>
+          <p className="mt-1 font-mono text-[11px] text-zinc-500">
+            {work.kind}
+            {work.source ? ` · ${work.source}` : ""}
+          </p>
+          <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11px] text-zinc-800 dark:text-zinc-200">
+            {JSON.stringify(work.json, null, 2)}
+          </pre>
+        </div>
+      )}
+      {tx && selectedAgentId && (
         <div className="mt-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
-          <FeedbackButton enabled />
+          <FeedbackButton enabled agentId={selectedAgentId} />
         </div>
       )}
     </div>

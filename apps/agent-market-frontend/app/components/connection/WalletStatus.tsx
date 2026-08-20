@@ -12,13 +12,20 @@ import {
 } from "@/app/lib/x402-usdc";
 import PayUsdcButton from "./PayUsdcButton";
 
-export default function WalletStatus() {
+export default function WalletStatus({
+  selectedPayTo,
+  selectedName,
+  selectedAgentId,
+}: {
+  selectedPayTo?: string | null;
+  selectedName?: string | null;
+  selectedAgentId?: string | null;
+}) {
   const { account, isConnected, chainId } = useWalletReady();
   const onBscTestnet = chainId === BSC_TESTNET_CHAIN_ID;
 
   return (
-    <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-16 font-sans dark:bg-black">
-      <main className="w-full max-w-xl rounded-2xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-950">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950 lg:sticky lg:top-24">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
           x402 · EIP-3009
         </p>
@@ -26,10 +33,8 @@ export default function WalletStatus() {
           Pagar {X402_PAYMENT_USDC} $U
         </h1>
         <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-          Flujo: registrás el agente en ERC-8004 → este endpoint cobra x402
-          exact en <strong>$U</strong> → el cliente deja feedback on-chain
-          (no puede ser el owner). GET{" "}
-          <code>/api/agent/resource</code> responde 402 hasta que pagues.
+          Flujo: elegís un agente (demo o indexador) → cobro x402 exact en{" "}
+          <strong>$U</strong> → se imprime el JSON que devuelva el seller.
         </p>
 
         <dl className="mt-8 grid gap-3 font-mono text-xs">
@@ -61,8 +66,11 @@ export default function WalletStatus() {
           />
         </dl>
 
-        <PayUsdcButton />
-      </main>
+        <PayUsdcButton
+          selectedPayTo={selectedPayTo}
+          selectedName={selectedName}
+          selectedAgentId={selectedAgentId}
+        />
     </div>
   );
 }

@@ -3,10 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { ExternalAgent } from '@bnb-marketplace/shared-types';
 import { AgentRegistryProvider } from '../interfaces/agent-registry.provider';
 import { Erc8004ScanClient } from '../erc8004/erc8004-scan.client';
+import { A2aHealthClient } from '../erc8004/a2a-health.client';
+import { a2aMetrics } from '../erc8004/a2a-health';
 import {
   isBnbAgentStudioAgent,
   isLikelyBnbAgentStudioListItem,
   mapScanAgentToExternal,
+  scanA2aEndpoint,
 } from '../erc8004/erc8004-agent.mapper';
 import type { Erc8004ChainContext, Scan8004Chain, Scan8004ListItem } from '../erc8004/erc8004.types';
 
@@ -19,6 +22,7 @@ export class Erc8004RegistryProvider implements AgentRegistryProvider {
   constructor(
     private readonly config: ConfigService,
     private readonly scan: Erc8004ScanClient,
+    private readonly a2a: A2aHealthClient,
   ) {}
 
   async getAgents(): Promise<ExternalAgent[]> {
@@ -107,8 +111,7 @@ export class Erc8004RegistryProvider implements AgentRegistryProvider {
 
     const chainMap = this.buildChainMap(await this.scan.getChains());
     const chain = chainMap.get(parsed.chainId) ?? this.fallbackChain(parsed.chainId);
-
-    return mapScanAgentToExternal(detail, chain);
+    return this.withLiveA2a(mapScanAgentToExternal(detail, chain), scanA2aEndpoint(detail));
   }
 
   async verifyOwnership(agentId: string, wallet: string): Promise<boolean> {
@@ -238,8 +241,33 @@ export class Erc8004RegistryProvider implements AgentRegistryProvider {
       if (studioOnly && !isBnbAgentStudioAgent(detail, builtWithFilter)) continue;
 
       const chain = chainMap.get(item.chain_id) ?? this.fallbackChain(item.chain_id);
-      discovered.set(detail.agent_id, mapScanAgentToExternal(detail, chain));
+      const external = mapScanAgentToExternal(detail, chain);
+      discovered.set(detail.agent_id, await this.withLiveA2a(external, scanA2aEndpoint(detail)));
     }
+  }
+
+  private async withLiveA2a(
+    external: ExternalAgent,
+    endpoint: string | null,
+  ): Promise<ExternalAgent> {
+    if (this.config.get('A2A_HEALTH_ON_SYNC', 'true') !== 'true') {
+      return external;
+    }
+
+    const health = await this.a2a.probe(endpoint);
+    const scan = external.scanMetrics;
+    return {
+      ...external,
+      scanMetrics: scan
+        ? {
+            ...scan,
+            categoryMetrics: {
+              ...scan.categoryMetrics,
+              ...a2aMetrics(health),
+            },
+          }
+        : scan,
+    };
   }
 
   private buildChainMap(chains: Scan8004Chain[]): Map<number, Erc8004ChainContext> {

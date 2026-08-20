@@ -105,8 +105,13 @@ export interface Scan8004AgentDetail {
     offchain_content?: Record<string, unknown>;
   };
   health_status?: {
-    services?: Record<string, { latency_ms?: number; status?: string }>;
+    services?: Record<
+      string,
+      { latency_ms?: number; status?: string; message?: string }
+    >;
+    checked_at?: string;
   };
+  health_checked_at?: string;
 }
 
 export interface Erc8004ChainContext {

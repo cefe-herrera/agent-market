@@ -9,8 +9,6 @@ export const REPUTATION_REGISTRY = getAddress(
   "0x8004B663056A597Dffe9eCcC1965A193B7388713",
 );
 
-export const AGENT_ID = Number(process.env.NEXT_PUBLIC_AGENT_ID ?? "0");
-
 export const reputationAbi = [
   {
     type: "function",
@@ -78,7 +76,18 @@ export function agentCaip(tokenId: number): string {
   return `${BSC_TESTNET_CHAIN_ID}:${IDENTITY_REGISTRY.toLowerCase()}:${tokenId}`;
 }
 
-export function isSameAddress(a?: Address | string | null, b?: Address | string | null) {
+export function parseTokenId(agentId: string | null | undefined): number {
+  if (!agentId) return 0;
+  if (/^\d+$/.test(agentId)) return Number(agentId);
+  const parts = agentId.split(":");
+  if (parts.length === 3 && /^\d+$/.test(parts[2])) return Number(parts[2]);
+  return 0;
+}
+
+export function isSameAddress(
+  a?: Address | string | null,
+  b?: Address | string | null,
+) {
   if (!a || !b) return false;
   return a.toLowerCase() === b.toLowerCase();
 }

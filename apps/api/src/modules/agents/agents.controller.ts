@@ -33,6 +33,14 @@ export class AgentsController {
     return data;
   }
 
+  @Get(':id/a2a-health')
+  @ApiOperation({
+    summary: 'Live-probe the A2A agent-card (healthy = card reachable + valid JSON)',
+  })
+  async getA2aHealth(@Param('id') id: string) {
+    return this.agentsService.getA2aHealth(id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get agent by id or slug' })
   findOne(@Param('id') id: string) {
