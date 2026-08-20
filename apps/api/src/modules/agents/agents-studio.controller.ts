@@ -17,7 +17,7 @@ export class AgentsStudioController {
   @ApiOperation({ summary: 'List registered ERC-8004 agents from 8004scan' })
   async listStudioAgents(): Promise<MarketplaceAgentDto[]> {
     const [result, chains] = await Promise.all([
-      this.scan.listRegisteredAgents({ limit: 100, offset: 0, isTestnet: false }),
+      this.scan.listRegisteredAgents({ limit: 100, offset: 0, isTestnet: true }),
       this.scan.getChains(),
     ]);
 

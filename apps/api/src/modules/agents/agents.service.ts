@@ -20,7 +20,7 @@ export class AgentsService {
 
   async findAll(): Promise<AgentDto[]> {
     const [result, chains] = await Promise.all([
-      this.scan.listRegisteredAgents({ limit: 100, offset: 0, isTestnet: false }),
+      this.scan.listRegisteredAgents({ limit: 100, offset: 0, isTestnet: true }),
       this.scan.getChains(),
     ]);
 

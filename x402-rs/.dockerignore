@@ -1,0 +1,11 @@
+target/
+.git/
+*.rs.bk
+*.log
+.env
+facilitator/.env
+facilitator/config.json
+facilitator/*/target/
+examples/*/.env
+protocol-conformance/node_modules/
+protocol-conformance/.env

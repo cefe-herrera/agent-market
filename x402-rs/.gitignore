@@ -1,0 +1,9 @@
+target/
+.idea/
+.env
+crates/*/target/
+facilitator/target/
+facilitator/config.json
+examples/*/.env
+protocol-conformance/node_modules/
+protocol-conformance/.env
