@@ -5,12 +5,7 @@ import { formatUnits } from "viem";
 import { useBalance, useReadContract } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useWalletReady } from "@/app/context/hooks/useWalletReady";
-import {
-  BSC_TESTNET_CHAIN_ID,
-  USDC_ADDRESS,
-  USDC_IS_CONFIGURED,
-  formatUsdc,
-} from "@/app/lib/x402-usdc";
+import { USDC_IS_CONFIGURED, formatUsdc, x402PaymentConfig } from "@/app/lib/x402-usdc";
 
 const erc20BalanceOf = {
   type: "function",
@@ -23,18 +18,19 @@ const erc20BalanceOf = {
 export default function ConnectWallet() {
   const { account } = useWalletReady();
   const [mounted, setMounted] = useState(false);
+  const payment = x402PaymentConfig();
 
   const { data: bnbBalance } = useBalance({
     address: account ?? undefined,
-    chainId: BSC_TESTNET_CHAIN_ID,
+    chainId: payment.chainId,
   });
 
-  const { data: usdcBalance } = useReadContract({
-    address: USDC_ADDRESS,
+  const { data: usdcBalance, isError: usdcError } = useReadContract({
+    address: payment.token,
     abi: [erc20BalanceOf],
     functionName: "balanceOf",
     args: account ? [account] : undefined,
-    chainId: BSC_TESTNET_CHAIN_ID,
+    chainId: payment.chainId,
     query: { enabled: Boolean(account) && USDC_IS_CONFIGURED },
   });
 
@@ -48,8 +44,11 @@ export default function ConnectWallet() {
     ? Number(formatUnits(bnbBalance.value, bnbBalance.decimals)).toFixed(4)
     : "0.0000";
 
-  const formattedUsdc =
-    usdcBalance !== undefined ? formatUsdc(usdcBalance) : "…";
+  const formattedUsdc = usdcError
+    ? "err"
+    : usdcBalance !== undefined
+      ? formatUsdc(usdcBalance)
+      : "…";
 
   const shortAddress = account
     ? `${account.slice(0, 6)}...${account.slice(-4)}`

@@ -9,6 +9,11 @@ import type {
   Scan8004PublicDetailResponse,
   Scan8004PublicListResponse,
 } from './erc8004.types';
+import {
+  isLikelyActiveScanItem,
+  mergeDetailIntoListItem,
+  scanItemNeedsDetail,
+} from './erc8004-list-quality';
 
 const SCAN_API_BASE = 'https://8004scan.io/api/v1';
 const SCAN_API_PUBLIC = `${SCAN_API_BASE}/public`;
@@ -69,6 +74,12 @@ export class Erc8004ScanClient {
     chainId?: number;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
+    x402Supported?: boolean;
+    hasMcp?: boolean;
+    hasA2a?: boolean;
+    isActive?: boolean;
+    minFeedbacks?: number;
+    minScore?: number;
   }): Promise<{ items: Scan8004ListItem[]; total: number }> {
     const effectiveLimit = Math.min(options.limit, 100);
     const params = new URLSearchParams({
@@ -88,6 +99,25 @@ export class Erc8004ScanClient {
       params.set('search', options.search.trim());
     }
 
+    if (options.x402Supported !== undefined) {
+      params.set('x402_supported', String(options.x402Supported));
+    }
+    if (options.hasMcp !== undefined) {
+      params.set('has_mcp', String(options.hasMcp));
+    }
+    if (options.hasA2a !== undefined) {
+      params.set('has_a2a', String(options.hasA2a));
+    }
+    if (options.isActive !== undefined) {
+      params.set('is_active', String(options.isActive));
+    }
+    if (options.minFeedbacks !== undefined) {
+      params.set('min_feedbacks', String(options.minFeedbacks));
+    }
+    if (options.minScore !== undefined) {
+      params.set('min_score', String(options.minScore));
+    }
+
     const response = await this.throttledFetch(`${SCAN_API_BASE}/agents?${params}`);
     if (!response.ok) {
       const text = await response.text();
@@ -97,7 +127,38 @@ export class Erc8004ScanClient {
     }
 
     const body = (await response.json()) as Scan8004PublicListResponse | Scan8004AuthListResponse;
-    return this.parseListResponse(body);
+    const parsed = this.parseListResponse(body);
+    if (options.chainId === undefined) return parsed;
+    const items = parsed.items.filter((item) => item.chain_id === options.chainId);
+    return { items, total: items.length };
+  }
+
+  async listUsableAgents(options: {
+    limit: number;
+    offset?: number;
+    isTestnet?: boolean;
+    search?: string;
+    chainId?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<{ items: Scan8004ListItem[]; total: number }> {
+    const withActivity = await this.listRegisteredAgents({
+      ...options,
+      minFeedbacks: 1,
+      isActive: true,
+    });
+    let items = withActivity.items.filter(isLikelyActiveScanItem);
+    if (items.length > 0 || options.search?.trim()) {
+      return { items, total: withActivity.total };
+    }
+
+    const paid = await this.listRegisteredAgents({
+      ...options,
+      x402Supported: true,
+      isActive: true,
+    });
+    items = paid.items.filter(isLikelyActiveScanItem);
+    return { items, total: paid.total };
   }
 
   private async fetchAgentList(options: {
@@ -137,10 +198,15 @@ export class Erc8004ScanClient {
     return this.parseListResponse(body);
   }
 
-  async getAgent(chainId: number, tokenId: string): Promise<Scan8004AgentDetail | null> {
+  async getAgent(
+    chainId: number,
+    tokenId: string,
+    options?: { skipThrottle?: boolean },
+  ): Promise<Scan8004AgentDetail | null> {
     try {
       const response = await this.throttledFetch(
         `${SCAN_API_BASE}/agents/${chainId}/${tokenId}`,
+        options,
       );
 
       if (response.status === 404) return null;
@@ -160,6 +226,24 @@ export class Erc8004ScanClient {
       );
       return null;
     }
+  }
+
+  async enrichCatalogItems(items: Scan8004ListItem[]): Promise<Scan8004ListItem[]> {
+    const pending = items.filter(scanItemNeedsDetail);
+    if (pending.length === 0) return items;
+
+    this.logger.debug(`Enriching ${pending.length} catalog agents with 8004scan detail`);
+    const details = await mapPool(pending, 5, (item) =>
+      this.getAgent(item.chain_id, item.token_id, { skipThrottle: true }),
+    );
+
+    const byAgentId = new Map<string, Scan8004AgentDetail>();
+    pending.forEach((item, index) => {
+      const detail = details[index];
+      if (detail) byAgentId.set(item.agent_id, detail);
+    });
+
+    return items.map((item) => mergeDetailIntoListItem(item, byAgentId.get(item.agent_id) ?? null));
   }
 
   private parseListResponse(
@@ -213,14 +297,17 @@ export class Erc8004ScanClient {
   }
 
   
-  private async throttledFetch(url: string): Promise<Response> {
+  private async throttledFetch(
+    url: string,
+    options?: { skipThrottle?: boolean },
+  ): Promise<Response> {
     const hasApiKey = Boolean(this.getApiKey());
     const defaultIntervalMs = hasApiKey ? 2100 : 6500;
     const minIntervalMs = Number(
       this.config.get('LATEST_8004SCAN_MIN_INTERVAL_MS', String(defaultIntervalMs)),
     );
     const elapsed = Date.now() - this.lastRequestAt;
-    if (elapsed < minIntervalMs) {
+    if (!options?.skipThrottle && elapsed < minIntervalMs) {
       await sleep(minIntervalMs - elapsed);
     }
 
@@ -239,7 +326,7 @@ export class Erc8004ScanClient {
     if (!response.ok && response.status === 429) {
       this.logger.warn('8004scan rate limit hit, backing off 60s');
       await sleep(60_000);
-      return this.throttledFetch(url);
+      return this.throttledFetch(url, options);
     }
 
     return response;
@@ -248,4 +335,25 @@ export class Erc8004ScanClient {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function mapPool<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+
+  async function worker() {
+    while (next < items.length) {
+      const index = next;
+      next += 1;
+      results[index] = await fn(items[index]);
+    }
+  }
+
+  const workers = Math.min(Math.max(concurrency, 1), items.length);
+  await Promise.all(Array.from({ length: workers }, () => worker()));
+  return results;
 }

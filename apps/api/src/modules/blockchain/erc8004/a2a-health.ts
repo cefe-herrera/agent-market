@@ -18,15 +18,22 @@ export function emptyA2aHealth(
     x402Support: extra?.x402Support ?? null,
     name: extra?.name ?? null,
     description: extra?.description ?? null,
+    priceLabel: extra?.priceLabel ?? null,
   };
 }
 
 export function parseAgentCard(json: unknown): Pick<
   A2aHealthDto,
-  'skills' | 'x402Support' | 'name' | 'description'
+  'skills' | 'x402Support' | 'name' | 'description' | 'priceLabel'
 > {
   if (!json || typeof json !== 'object') {
-    return { skills: [], x402Support: null, name: null, description: null };
+    return {
+      skills: [],
+      x402Support: null,
+      name: null,
+      description: null,
+      priceLabel: null,
+    };
   }
 
   const card = json as Record<string, unknown>;
@@ -58,7 +65,31 @@ export function parseAgentCard(json: unknown): Pick<
     x402Support: x402,
     name: typeof card.name === 'string' ? card.name : null,
     description: typeof card.description === 'string' ? card.description : null,
+    priceLabel: parseUsagePrice(card),
   };
+}
+
+function parseUsagePrice(card: Record<string, unknown>): string | null {
+  const services = card.services;
+  if (Array.isArray(services)) {
+    const labels = [
+      ...new Set(
+        services
+          .map((service) => {
+            if (!service || typeof service !== 'object') return null;
+            const row = service as { price_display?: unknown; price?: unknown };
+            if (typeof row.price_display === 'string' && row.price_display.trim()) {
+              return row.price_display.trim();
+            }
+            return null;
+          })
+          .filter((label): label is string => Boolean(label)),
+      ),
+    ];
+    if (labels.length === 1) return labels[0];
+    if (labels.length > 1) return labels.join(' · ');
+  }
+  return null;
 }
 
 export function isAgentCardPayload(json: unknown): boolean {
@@ -67,6 +98,7 @@ export function isAgentCardPayload(json: unknown): boolean {
   return (
     typeof card.name === 'string' ||
     Array.isArray(card.skills) ||
+    Array.isArray(card.services) ||
     typeof card.url === 'string' ||
     typeof card.protocolVersion === 'string' ||
     Array.isArray(card.capabilities)
@@ -84,5 +116,6 @@ export function a2aMetrics(health: A2aHealthDto): Record<string, unknown> {
     a2aSkills: health.skills,
     a2aX402Support: health.x402Support,
     a2aName: health.name,
+    a2aPriceLabel: health.priceLabel,
   };
 }

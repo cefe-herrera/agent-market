@@ -1,5 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { NetworkModule } from './common/network/network.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { AgentLookupModule } from './common/agents/agent-lookup.module';
 import { EventsModule } from './common/events/events.module';
@@ -19,6 +20,7 @@ import { UsersModule } from './modules/users/users.module';
       isGlobal: true,
       envFilePath: ['.env', '../../.env'],
     }),
+    NetworkModule,
     PrismaModule,
     AgentLookupModule,
     EventsModule,

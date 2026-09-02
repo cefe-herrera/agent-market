@@ -3,6 +3,7 @@ import {
   isBnbAgentStudioAgent,
   decodeHexMetadata,
   mapScanDetailToMarketplaceAgent,
+  mapScanListItemToMarketplaceAgent,
 } from '../src/modules/blockchain/erc8004/erc8004-agent.mapper';
 import { AgentCategory, AgentSource } from '@bnb-marketplace/shared-types';
 
@@ -117,6 +118,59 @@ describe('erc8004-agent.mapper', () => {
     expect(dto.a2a?.healthy).toBe(false);
     expect(dto.a2a?.status).toBe('unhealthy');
     expect(dto.a2a?.endpoint).toContain('agent-card.json');
+    expect(dto.endpoints?.a2a).toContain('agent-card.json');
     expect(dto.supportedAssets).toEqual(['U']);
+  });
+
+  it('maps list items without A2A as missing and without MCP', () => {
+    const dto = mapScanListItemToMarketplaceAgent(
+      {
+        token_id: '73314',
+        chain_id: 8453,
+        name: 'BaseBounty reference worker',
+        description: 'Reference agent used to verify the BaseBounty take/submit path.',
+        owner_address: '0x1',
+        created_at: '2026-08-28T15:21:21Z',
+        agent_id: '8453:0x8004:73314',
+        supported_protocols: [],
+        x402_supported: true,
+      },
+      { chainId: 8453, name: 'Base', chainKey: 'base', isTestnet: false },
+    );
+
+    expect(dto.protocols).toEqual(['ERC-8004']);
+    expect(dto.a2a?.status).toBe('missing');
+    expect(dto.endpoints?.mcp).toBeNull();
+    expect(dto.endpoints?.a2a).toBeNull();
+  });
+
+  it('maps declared A2A health and MCP from list enrichment fields', () => {
+    const dto = mapScanListItemToMarketplaceAgent(
+      {
+        token_id: '1',
+        chain_id: 1,
+        name: 'magnetite-sequencer',
+        description: 'MEV sequencing agent',
+        owner_address: '0x1',
+        created_at: '2026-08-28T15:21:21Z',
+        agent_id: '1:0x8004:1',
+        supported_protocols: ['A2A', 'MCP'],
+        a2a_endpoint: 'https://magnetite.eth/.well-known/agent-card.json',
+        mcp_server: 'https://mcp.example.com/sse',
+        health_status: {
+          services: {
+            a2a: { status: 'unhealthy', message: 'Connection error', latency_ms: 452 },
+          },
+          checked_at: '2026-08-28T10:36:27.233672+00:00',
+        },
+      },
+      { chainId: 1, name: 'Ethereum', chainKey: 'eth', isTestnet: false },
+    );
+
+    expect(dto.protocols).toContain('A2A');
+    expect(dto.protocols).toContain('MCP');
+    expect(dto.a2a?.status).toBe('unhealthy');
+    expect(dto.endpoints?.a2a).toContain('agent-card.json');
+    expect(dto.endpoints?.mcp).toBe('https://mcp.example.com/sse');
   });
 });

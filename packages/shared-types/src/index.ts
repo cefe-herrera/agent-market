@@ -145,12 +145,39 @@ export interface A2aHealthDto {
   x402Support: boolean | null;
   name?: string | null;
   description?: string | null;
+  priceLabel?: string | null;
+}
+
+export type VerificationLevel = 'registered' | 'schema_valid' | 'live';
+
+export interface AgentVerificationDto {
+  level: VerificationLevel;
+  registered: boolean;
+  schemaValid: boolean;
+  live: boolean;
+  livePending: boolean;
+  schemaErrors: string[];
+  liveError: string | null;
+  checkedAt: string | null;
+  liveCheckedAt: string | null;
+  priceLabel: string | null;
+  skills: string[];
+  /** true = BNB Agent SDK / studio heuristic; false = open 8004scan (A2A or x402). */
+  studioSdk?: boolean;
+}
+
+export interface AgentEndpointsDto {
+  a2a: string | null;
+  mcp: string | null;
+  agentUrl?: string | null;
 }
 
 export interface MarketplaceAgentDto extends AgentDto {
   metrics?: AgentMetricsDto;
   marketplaceScore?: number;
   a2a?: A2aHealthDto;
+  endpoints?: AgentEndpointsDto;
+  verification?: AgentVerificationDto;
 }
 
 export interface CompareAgentDto extends MarketplaceAgentDto {
@@ -274,6 +301,9 @@ export interface MarketplaceFilters {
   isTestnet?: boolean;
   minimumCapital?: number;
   search?: string;
+  usable?: boolean;
+  /** Expand catalog beyond BNB Agent SDK: 8004scan A2A / x402 with schema-valid Agent Card. */
+  open?: boolean;
   sort?: MarketplaceSort;
   page?: number;
   limit?: number;

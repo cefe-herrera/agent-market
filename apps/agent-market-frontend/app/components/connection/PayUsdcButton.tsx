@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { getAddress, isAddress } from "viem";
 import { useWalletReady } from "@/app/context/hooks/useWalletReady";
 import {
-  BSC_TESTNET_CHAIN_ID,
+  X402_CHAIN_ID,
+  X402_EXPLORER_TX,
+  X402_IS_MAINNET,
   X402_PAYMENT_USDC,
   X402_PAY_TO,
 } from "@/app/lib/x402-usdc";
@@ -52,7 +54,7 @@ export default function PayUsdcButton({
     Boolean(payTo) &&
     !selfPay &&
     Boolean(selectedAgentId) &&
-    chainId === BSC_TESTNET_CHAIN_ID;
+    chainId === X402_CHAIN_ID;
   const busy = status !== "idle";
 
   async function onPay() {
@@ -135,8 +137,9 @@ export default function PayUsdcButton({
       </button>
       {!ready && !selfPay && (
         <p className="text-xs text-amber-600">
-          Elegí un agente, conectá la wallet en BNB Testnet (97) y poné un
-          `to` distinto al que firma.
+          Elegí un agente, conectá la wallet en{" "}
+          {X402_IS_MAINNET ? "BNB Mainnet (56)" : "BNB Testnet (97)"} y poné
+          un `to` distinto al que firma.
         </p>
       )}
       {error && (
@@ -147,7 +150,7 @@ export default function PayUsdcButton({
       {tx && (
         <a
           className="break-all font-mono text-xs text-emerald-600 underline"
-          href={`https://testnet.bscscan.com/tx/${tx}`}
+          href={`${X402_EXPLORER_TX}/${tx}`}
           target="_blank"
           rel="noreferrer"
         >

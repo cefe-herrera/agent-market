@@ -1,11 +1,15 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
+import { NetworkConfig } from '../network/network.config';
 
 @ApiTags('health')
 @Controller('health')
 export class HealthController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly network: NetworkConfig,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Health check endpoint' })
@@ -20,6 +24,7 @@ export class HealthController {
     return {
       status: dbStatus === 'ok' ? 'healthy' : 'degraded',
       timestamp: new Date().toISOString(),
+      network: this.network.mode,
       services: {
         database: dbStatus,
       },

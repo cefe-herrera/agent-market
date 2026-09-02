@@ -1,3 +1,5 @@
+import { BSC_MAINNET_CHAIN_ID } from "@/app/lib/network";
+
 export type MarketplaceAgent = {
   id: string;
   agentId: string;
@@ -25,10 +27,65 @@ export type MarketplaceAgent = {
     skills?: string[];
     x402Support?: boolean | null;
     error?: string | null;
+    priceLabel?: string | null;
+  };
+  endpoints?: {
+    a2a: string | null;
+    mcp: string | null;
+    agentUrl?: string | null;
+  };
+  verification?: {
+    level: "registered" | "schema_valid" | "live";
+    registered: boolean;
+    schemaValid: boolean;
+    live: boolean;
+    livePending: boolean;
+    schemaErrors: string[];
+    liveError: string | null;
+    priceLabel: string | null;
+    skills: string[];
+    studioSdk?: boolean;
   };
 };
 
 export const BSC_TESTNET_CHAIN_ID = 97;
+
+export function agentHasMcp(agent: MarketplaceAgent): boolean {
+  if (agent.protocols.some((protocol) => protocol.toLowerCase() === "mcp")) {
+    return true;
+  }
+  return Boolean(agent.endpoints?.mcp);
+}
+
+export function agentEndpoints(agent: MarketplaceAgent): {
+  a2a: string | null;
+  mcp: string | null;
+} {
+  const metricsMcp = agent.metrics?.categoryMetrics?.["mcpEndpoint"];
+  return {
+    a2a: agent.a2a?.endpoint ?? agent.endpoints?.a2a ?? null,
+    mcp:
+      agent.endpoints?.mcp ??
+      (typeof metricsMcp === "string" ? metricsMcp : null),
+  };
+}
+
+export function isHttpUrl(value: string | null | undefined): boolean {
+  return Boolean(value && /^https?:\/\//i.test(value.trim()));
+}
+
+export function verificationLabels(agent: MarketplaceAgent): string[] {
+  const v = agent.verification;
+  if (!v) return [];
+  const labels = ["Registered"];
+  if (v.studioSdk === true) labels.push("SDK");
+  else if (v.studioSdk === false) labels.push("open");
+  if (v.schemaValid) labels.push("Schema");
+  if (v.live) labels.push("Live");
+  else if (v.livePending) labels.push("Live pending");
+  else if (v.schemaValid) labels.push("Live down");
+  return labels;
+}
 
 export function isUsableBscTestnetAgent(agent: MarketplaceAgent): boolean {
   if (agent.chainId !== BSC_TESTNET_CHAIN_ID) return false;
@@ -42,6 +99,17 @@ export function isUsableBscTestnetAgent(agent: MarketplaceAgent): boolean {
   return hasA2a || hasX402;
 }
 
+/** Indexer rows: backend already dropped factory noise when usable=true. BSC only. */
+export function isIndexerCatalogAgent(
+  agent: MarketplaceAgent,
+  mode: "mainnet" | "testnet",
+): boolean {
+  const chainId = mode === "testnet" ? BSC_TESTNET_CHAIN_ID : BSC_MAINNET_CHAIN_ID;
+  if (agent.chainId !== chainId) return false;
+  if (mode === "testnet") return agent.isTestnet !== false;
+  return agent.isTestnet !== true;
+}
+
 export function shortenAddress(value: string): string {
   if (!value || value.length < 12) return value;
   return `${value.slice(0, 6)}…${value.slice(-4)}`;
@@ -49,7 +117,8 @@ export function shortenAddress(value: string): string {
 
 /** 8004scan listings whose service URL is a dummy host, not a live seller. */
 export function isPlaceholderEndpoint(agent: MarketplaceAgent): boolean {
-  const uri = (agent.agentUri ?? "").toLowerCase();
+  const endpoints = agentEndpoints(agent);
+  const uri = `${agent.agentUri ?? ""} ${endpoints.a2a ?? ""} ${endpoints.mcp ?? ""}`.toLowerCase();
   if (uri.includes(".example") || uri.includes("example.com")) return true;
   const desc = `${agent.description} ${agent.shortDescription}`.toLowerCase();
   if (desc.includes("research only")) return true;

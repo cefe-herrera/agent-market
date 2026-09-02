@@ -2,13 +2,14 @@
 
 import { useWalletReady } from "@/app/context/hooks/useWalletReady";
 import {
-  BSC_TESTNET_CHAIN_ID,
-  USDC_ADDRESS,
   USDC_DECIMALS,
   USDC_EIP712,
+  X402_CHAIN_ID,
+  X402_IS_MAINNET,
   X402_NETWORK,
   X402_PAYMENT_USDC,
   X402_SCHEME,
+  x402PaymentConfig,
 } from "@/app/lib/x402-usdc";
 import PayUsdcButton from "./PayUsdcButton";
 
@@ -22,10 +23,11 @@ export default function WalletStatus({
   selectedAgentId?: string | null;
 }) {
   const { account, isConnected, chainId } = useWalletReady();
-  const onBscTestnet = chainId === BSC_TESTNET_CHAIN_ID;
+  const onPaymentChain = chainId === X402_CHAIN_ID;
+  const chainHint = X402_IS_MAINNET ? "bsc mainnet" : "bsc testnet";
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950 lg:sticky lg:top-24">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
           x402 · EIP-3009
         </p>
@@ -44,7 +46,7 @@ export default function WalletStatus({
             label="EIP-712"
             value={`${USDC_EIP712.name} v${USDC_EIP712.version}`}
           />
-          <Row label="$U" value={USDC_ADDRESS} />
+          <Row label="$U" value={x402PaymentConfig().token} />
           <Row label="decimals" value={String(USDC_DECIMALS)} />
           <Row label="amount" value={`${X402_PAYMENT_USDC} U`} />
           <Row label="payTo" value="campo `to` abajo (no puede ser la wallet que firma)" />
@@ -57,12 +59,12 @@ export default function WalletStatus({
             label="chain"
             value={
               chainId
-                ? onBscTestnet
-                  ? `${chainId} (bsc testnet)`
-                  : `${chainId} (switch to 97)`
+                ? onPaymentChain
+                  ? `${chainId} (${chainHint})`
+                  : `${chainId} (switch to ${X402_CHAIN_ID})`
                 : "—"
             }
-            warn={Boolean(chainId) && !onBscTestnet}
+            warn={Boolean(chainId) && !onPaymentChain}
           />
         </dl>
 

@@ -20,6 +20,8 @@ import {
   fallbackChain,
   mapScanListItemToMarketplaceAgent,
 } from '../blockchain/erc8004/erc8004-agent.mapper';
+import { AgentVerificationService } from '../blockchain/erc8004/agent-verification.service';
+import { NetworkConfig } from '../../common/network/network.config';
 
 const CATEGORY_INFO: CategoryInfo[] = [
   {
@@ -65,6 +67,8 @@ export class MarketplaceService {
     private readonly agentsService: AgentsService,
     private readonly analyticsService: AnalyticsPublicService,
     private readonly scan: Erc8004ScanClient,
+    private readonly verification: AgentVerificationService,
+    private readonly network: NetworkConfig,
   ) {}
 
   getCategories(): CategoryInfo[] {
@@ -76,12 +80,23 @@ export class MarketplaceService {
   }
 
   async getStats(): Promise<MarketplaceStats> {
+    const isTestnet = this.network.isTestnet;
     const [registered, chains] = await Promise.all([
-      this.scan.listRegisteredAgents({ limit: 1, offset: 0, isTestnet: false }),
+      this.scan.listRegisteredAgents({
+        limit: 1,
+        offset: 0,
+        isTestnet,
+        chainId: this.network.chainId,
+      }),
       this.scan.getChains(),
     ]);
 
-    const mainnetChains = chains.filter((chain) => !chain.is_testnet && chain.enabled);
+    const networkChains = chains.filter(
+      (chain) =>
+        chain.enabled &&
+        chain.is_testnet === isTestnet &&
+        chain.chain_id === this.network.chainId,
+    );
 
     return {
       agents: registered.total,
@@ -89,16 +104,21 @@ export class MarketplaceService {
       protocols: 0,
       verified: 0,
       studioAgents: 0,
-      chains: mainnetChains.length,
-      mainnetAgents: registered.total,
-      testnetAgents: 0,
+      chains: networkChains.length,
+      mainnetAgents: isTestnet ? 0 : registered.total,
+      testnetAgents: isTestnet ? registered.total : 0,
     };
   }
 
   async getChains(): Promise<ChainInfo[]> {
     const chains = await this.scan.getChains();
     return chains
-      .filter((chain) => chain.enabled)
+      .filter(
+        (chain) =>
+          chain.enabled &&
+          chain.is_testnet === this.network.isTestnet &&
+          chain.chain_id === this.network.chainId,
+      )
       .map((chain) => ({
         chainId: chain.chain_id,
         name: chain.name,
@@ -117,20 +137,35 @@ export class MarketplaceService {
     const page = filters.page ?? 1;
     const limit = Math.min(filters.limit ?? 100, 100);
     const offset = (page - 1) * limit;
-
-    const [result, chains] = await Promise.all([
-      this.scan.listRegisteredAgents({
+    const usable = filters.usable !== false;
+    if (usable) {
+      const verified = await this.verification.listCatalog({
+        isTestnet: filters.isTestnet ?? this.network.isTestnet,
         limit,
         offset,
-        isTestnet: filters.isTestnet ?? false,
-        search: filters.search,
-        chainId: filters.chainId,
-      }),
+        ...(filters.open ? { expandOpen: true } : {}),
+      });
+      let data = this.applyClientFilters(verified.data, filters);
+      data = this.applyClientSort(data, filters.sort);
+      return { data, total: verified.total, page, limit };
+    }
+
+    const scanQuery = {
+      limit,
+      offset,
+      isTestnet: filters.isTestnet ?? this.network.isTestnet,
+      search: filters.search,
+      chainId: filters.chainId ?? this.network.chainId,
+    };
+
+    const [result, chains] = await Promise.all([
+      this.scan.listRegisteredAgents(scanQuery),
       this.scan.getChains(),
     ]);
 
     const chainMap = buildChainMap(chains);
-    let data = result.items.map((item) =>
+    const items = await this.scan.enrichCatalogItems(result.items);
+    let data = items.map((item) =>
       mapScanListItemToMarketplaceAgent(
         item,
         chainMap.get(item.chain_id) ?? fallbackChain(item.chain_id),
@@ -144,22 +179,12 @@ export class MarketplaceService {
   }
 
   async getFeatured(limit = 10): Promise<MarketplaceAgentDto[]> {
-    const [result, chains] = await Promise.all([
-      this.scan.listRegisteredAgents({
-        limit,
-        offset: 0,
-        isTestnet: false,
-      }),
-      this.scan.getChains(),
-    ]);
-
-    const chainMap = buildChainMap(chains);
-    return result.items.map((item) =>
-      mapScanListItemToMarketplaceAgent(
-        item,
-        chainMap.get(item.chain_id) ?? fallbackChain(item.chain_id),
-      ),
-    );
+    const verified = await this.verification.listCatalog({
+      isTestnet: this.network.isTestnet,
+      limit,
+      offset: 0,
+    });
+    return verified.data;
   }
 
   async compareAgents(ids: string[]): Promise<CompareAgentDto[]> {
@@ -195,6 +220,7 @@ export class MarketplaceService {
     filters: MarketplaceFilters,
   ): MarketplaceAgentDto[] {
     return agents.filter((agent) => {
+      if (agent.chainId !== (filters.chainId ?? this.network.chainId)) return false;
       if (filters.category && agent.category !== filters.category) return false;
       if (filters.protocol && !agent.protocols.includes(filters.protocol)) return false;
       if (filters.riskLevel && agent.riskLevel !== filters.riskLevel) return false;

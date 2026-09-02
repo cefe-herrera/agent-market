@@ -12,6 +12,7 @@ import {
   scanA2aEndpoint,
 } from '../erc8004/erc8004-agent.mapper';
 import type { Erc8004ChainContext, Scan8004Chain, Scan8004ListItem } from '../erc8004/erc8004.types';
+import { NetworkConfig } from '../../../common/network/network.config';
 
 @Injectable()
 export class Erc8004RegistryProvider implements AgentRegistryProvider {
@@ -23,6 +24,7 @@ export class Erc8004RegistryProvider implements AgentRegistryProvider {
     private readonly config: ConfigService,
     private readonly scan: Erc8004ScanClient,
     private readonly a2a: A2aHealthClient,
+    private readonly network: NetworkConfig,
   ) {}
 
   async getAgents(): Promise<ExternalAgent[]> {
@@ -233,6 +235,9 @@ export class Erc8004RegistryProvider implements AgentRegistryProvider {
     for (const item of items) {
       if (discovered.size >= maxAgents) break;
 
+      const listedChain = chainMap.get(item.chain_id);
+      if (listedChain && listedChain.isTestnet !== this.network.isTestnet) continue;
+
       if (studioOnly && !isLikelyBnbAgentStudioListItem(item)) continue;
 
       const detail = await this.scan.getAgent(item.chain_id, item.token_id);
@@ -250,7 +255,7 @@ export class Erc8004RegistryProvider implements AgentRegistryProvider {
     external: ExternalAgent,
     endpoint: string | null,
   ): Promise<ExternalAgent> {
-    if (this.config.get('A2A_HEALTH_ON_SYNC', 'true') !== 'true') {
+    if (this.config.get('A2A_HEALTH_ON_SYNC', 'false') !== 'true') {
       return external;
     }
 
@@ -294,7 +299,9 @@ export class Erc8004RegistryProvider implements AgentRegistryProvider {
   }
 
   private resolveSyncChains(chains: Scan8004Chain[]): Scan8004Chain[] {
-    const enabled = chains.filter((chain) => chain.enabled);
+    const enabled = chains.filter(
+      (chain) => chain.enabled && chain.is_testnet === this.network.isTestnet,
+    );
     const configured = (
       this.config.get<string>('ERC8004_SYNC_CHAINS') ??
       this.config.get<string>('AGENT_STUDIO_SYNC_CHAINS') ??
@@ -307,7 +314,15 @@ export class Erc8004RegistryProvider implements AgentRegistryProvider {
       configured.split(',').map((key) => key.trim().toLowerCase()).filter(Boolean),
     );
 
-    return enabled.filter((chain) => allowed.has(chain.chain_key.toLowerCase()));
+    const matched = enabled.filter((chain) => allowed.has(chain.chain_key.toLowerCase()));
+    if (configured && matched.length === 0) {
+      this.logger.warn(
+        `ERC8004_SYNC_CHAINS has no ${this.network.mode} chains; scanning all ${this.network.mode} chains`,
+      );
+      return enabled;
+    }
+
+    return matched;
   }
 
   private parseAgentId(agentId: string): { chainId: number; tokenId: string } | null {

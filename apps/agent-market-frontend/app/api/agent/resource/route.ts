@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { usdcExactRequirements } from "@/app/lib/x402-usdc";
+import { getAddress } from "viem";
+import { X402_NETWORK, usdcExactRequirements } from "@/app/lib/x402-usdc";
 import { getDemoSeller } from "@/app/lib/demo-agents";
 import { resolvePaidWork } from "@/app/lib/agent-work";
 
@@ -12,12 +13,12 @@ function paymentRequired(url: string, sellerId?: string | null) {
   const accepts = [usdcExactRequirements()];
   return {
     x402Version: 2,
-    error: "PAYMENT-SIGNATURE required — exact $U EIP-3009 on eip155:97",
+    error: `PAYMENT-SIGNATURE required — exact $U EIP-3009 on ${X402_NETWORK}`,
     resource: {
       url,
       description: demo
-        ? `${demo.name} — x402 seller (BSC testnet $U)`
-        : "Latam Market Pay — x402 seller (BSC testnet $U)",
+        ? `${demo.name} — x402 seller (${X402_NETWORK} $U)`
+        : `Latam Market Pay — x402 seller (${X402_NETWORK} $U)`,
       mimeType: "application/json",
       serviceName: demo?.agentId ?? sellerId ?? "LatamMarketPay",
       tags: ["x402", "erc8004", "bnb"],
@@ -88,6 +89,29 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
+  const expected = usdcExactRequirements();
+  const sentAsset =
+    (body as { paymentRequirements?: { asset?: string } }).paymentRequirements
+      ?.asset ??
+    (
+      body as {
+        paymentPayload?: { accepted?: { asset?: string } };
+      }
+    ).paymentPayload?.accepted?.asset;
+  if (
+    typeof sentAsset === "string" &&
+    getAddress(sentAsset) !== expected.asset
+  ) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: `x402 asset mismatch: client sent ${sentAsset} but ${expected.network} $U is ${expected.asset}. Reiniciá Next (npm run dev:mainnet) y volvé a firmar.`,
+        details: { sentAsset, expected: expected.asset, network: expected.network },
+      },
+      { status: 402 },
+    );
+  }
+
   const verified = await postFacilitator("/verify", body);
   const verifyJson = verified.json as { isValid?: boolean; payer?: string };
 

@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:mainnet": "cross-env NEXT_PUBLIC_NETWORK=mainnet NETWORK=mainnet next dev",
+    "dev:testnet": "cross-env NEXT_PUBLIC_NETWORK=testnet NETWORK=testnet next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -25,6 +27,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "cross-env": "^7.0.3"
   }
 }

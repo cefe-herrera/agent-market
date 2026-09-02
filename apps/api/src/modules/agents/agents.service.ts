@@ -9,6 +9,7 @@ import {
   fallbackChain,
   mapScanListItemToMarketplaceAgent,
 } from '../blockchain/erc8004/erc8004-agent.mapper';
+import { NetworkConfig } from '../../common/network/network.config';
 
 @Injectable()
 export class AgentsService {
@@ -16,21 +17,30 @@ export class AgentsService {
     private readonly prisma: PrismaService,
     private readonly scan: Erc8004ScanClient,
     private readonly resolver: Erc8004AgentResolver,
+    private readonly network: NetworkConfig,
   ) {}
 
   async findAll(): Promise<AgentDto[]> {
     const [result, chains] = await Promise.all([
-      this.scan.listRegisteredAgents({ limit: 100, offset: 0, isTestnet: true }),
+      this.scan.listUsableAgents({
+        limit: 100,
+        offset: 0,
+        isTestnet: this.network.isTestnet,
+        chainId: this.network.chainId,
+      }),
       this.scan.getChains(),
     ]);
 
     const chainMap = buildChainMap(chains);
-    return result.items.map((item) =>
-      mapScanListItemToMarketplaceAgent(
-        item,
-        chainMap.get(item.chain_id) ?? fallbackChain(item.chain_id),
-      ),
-    );
+    const items = await this.scan.enrichCatalogItems(result.items);
+    return items
+      .filter((item) => item.chain_id === this.network.chainId)
+      .map((item) =>
+        mapScanListItemToMarketplaceAgent(
+          item,
+          chainMap.get(item.chain_id) ?? fallbackChain(item.chain_id),
+        ),
+      );
   }
 
   async findById(id: string): Promise<MarketplaceAgentDto> {
@@ -46,7 +56,7 @@ export class AgentsService {
   }
 
   async getA2aHealth(id: string): Promise<A2aHealthDto> {
-    const fromScan = await this.resolver.resolveByIdOrSlug(id);
+    const fromScan = await this.resolver.resolveByIdOrSlug(id, { liveProbe: true });
     if (!fromScan?.a2a) {
       throw new NotFoundException(`Agent ${id} not found`);
     }

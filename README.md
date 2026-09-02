@@ -108,8 +108,18 @@ npm install
 npm run db:migrate
 npm run db:seed
 
-# 4. Start dev servers (API :3000 + Web :4200)
-npm run dev
+# 4. Start API + Angular (NETWORK from .env, default mainnet)
+npm run dev:mainnet
+npm run dev:testnet
+
+# Next marketplace (apps/agent-market-frontend :3000)
+npm run dev:front:mainnet
+npm run dev:front:testnet
+
+# 5. x402 facilitator — same GHCR image; NETWORK picks the chain (eip155:56 / 97)
+cd x402-rs
+NETWORK=mainnet docker compose up      # BSC mainnet; signer needs BNB for gas
+# NETWORK=testnet docker compose up    # BSC testnet; signer needs tBNB
 ```
 
 Open [http://localhost:4200](http://localhost:4200)

@@ -9,11 +9,10 @@ x402 settle **no** vive acá: eso es Next (`apps/agent-market-frontend`) + facil
 # en agent-market/
 # .env de la raíz: PORT=3005, CORS, 8004scan key, AGENT_REGISTRY_MODE=erc8004
 
-cd apps/api
-# shared-types tiene que estar buildeado si el workspace lo pide
-pnpm --filter @bnb-marketplace/shared-types build
-pnpm --filter @bnb-marketplace/api build
-pnpm --filter @bnb-marketplace/api dev
+npm run dev:api:mainnet   # 8004scan mainnet
+npm run dev:api:testnet   # 8004scan testnet
+npm run dev:front:mainnet # Next :3000, mismo NETWORK
+npm run dev:front:testnet
 ```
 
 - API: `http://localhost:3005`
@@ -26,6 +25,7 @@ El front en `:3000` pega contra Nest vía BFF `/api/marketplace/*`.
 | Variable | Qué hace |
 |---|---|
 | `PORT=3005` | Nest. No usar 3000 (Next). |
+| `NETWORK` | `mainnet` (default) o `testnet`. También `npm run dev:api:mainnet` / `dev:api:testnet`. |
 | `CORS_ORIGIN` | Incluye `http://localhost:3000` **y** `http://localhost:4200`. Sin `:3000` el catálogo del front falla CORS. |
 | `AGENT_REGISTRY_MODE=erc8004` | Lee 8004scan, no el mock. |
 | `AGENT_STUDIO_ONLY=false` | Lista todos los testnet, no solo “bnbagent”. |

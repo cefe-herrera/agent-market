@@ -1,10 +1,9 @@
 import { getAddress, toHex, type Address, type Hex, type WalletClient } from "viem";
 import {
-  BSC_TESTNET_CHAIN_ID,
-  USDC_ADDRESS,
   USDC_EIP712,
   X402_AMOUNT_ATOMIC,
   X402_MAX_TIMEOUT_SECONDS,
+  x402PaymentConfig,
   usdcExactRequirements,
 } from "@/app/lib/x402-usdc";
 
@@ -36,6 +35,7 @@ export async function signExactUsdcPayment(
     );
   }
 
+  const cfg = x402PaymentConfig();
   const requirements = {
     ...buildPaymentRequirements(),
     payTo: to,
@@ -51,8 +51,8 @@ export async function signExactUsdcPayment(
     domain: {
       name: USDC_EIP712.name,
       version: USDC_EIP712.version,
-      chainId: BSC_TESTNET_CHAIN_ID,
-      verifyingContract: USDC_ADDRESS,
+      chainId: cfg.chainId,
+      verifyingContract: requirements.asset,
     },
     types: eip3009Types,
     primaryType: "TransferWithAuthorization",

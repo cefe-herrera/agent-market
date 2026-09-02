@@ -10,18 +10,24 @@ import {
   withA2aHealth,
 } from './erc8004-agent.mapper';
 import { slugifyAgentName } from '../../agents/agent-studio.mapper';
+import { NetworkConfig } from '../../../common/network/network.config';
 
 @Injectable()
 export class Erc8004AgentResolver {
   constructor(
     private readonly scan: Erc8004ScanClient,
     private readonly a2a: A2aHealthClient,
+    private readonly network: NetworkConfig,
   ) {}
 
-  async resolveByIdOrSlug(idOrSlug: string): Promise<MarketplaceAgentDto | null> {
+  async resolveByIdOrSlug(
+    idOrSlug: string,
+    options?: { liveProbe?: boolean },
+  ): Promise<MarketplaceAgentDto | null> {
+    const liveProbe = options?.liveProbe === true;
     const parsed = this.parseAgentId(idOrSlug);
     if (parsed) {
-      return this.fetchAgentDetail(parsed.chainId, parsed.tokenId);
+      return this.fetchAgentDetail(parsed.chainId, parsed.tokenId, liveProbe);
     }
 
     const tokenId = this.extractTokenIdFromSlug(idOrSlug);
@@ -30,12 +36,13 @@ export class Erc8004AgentResolver {
     const chainId = await this.resolveChainIdForToken(tokenId, idOrSlug);
     if (!chainId) return null;
 
-    return this.fetchAgentDetail(chainId, tokenId);
+    return this.fetchAgentDetail(chainId, tokenId, liveProbe);
   }
 
   private async fetchAgentDetail(
     chainId: number,
     tokenId: string,
+    liveProbe: boolean,
   ): Promise<MarketplaceAgentDto | null> {
     const [detail, chains] = await Promise.all([
       this.scan.getAgent(chainId, tokenId),
@@ -46,6 +53,8 @@ export class Erc8004AgentResolver {
     const chainMap = buildChainMap(chains);
     const chain = chainMap.get(detail.chain_id) ?? fallbackChain(detail.chain_id);
     const dto = mapScanDetailToMarketplaceAgent(detail, chain);
+    if (!liveProbe) return dto;
+
     const live = await this.a2a.probe(scanA2aEndpoint(detail));
     return withA2aHealth(dto, live);
   }
@@ -57,7 +66,7 @@ export class Erc8004AgentResolver {
     const result = await this.scan.listRegisteredAgents({
       limit: 100,
       offset: 0,
-      isTestnet: false,
+      isTestnet: this.network.isTestnet,
       search: tokenId,
     });
 

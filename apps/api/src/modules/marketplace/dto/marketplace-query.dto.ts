@@ -56,6 +56,32 @@ export class MarketplaceQueryDto {
   @IsBoolean()
   isTestnet?: boolean;
 
+  @ApiPropertyOptional({
+    description:
+      'Default true: verification pipeline (registered → schema-valid → live). Schema fail = excluded. false = raw 8004scan dump.',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'false' || value === false) return false;
+    if (value === 'true' || value === true) return true;
+    return undefined;
+  })
+  @IsBoolean()
+  usable?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'When true with usable catalog, scan 8004scan A2A/x402 agents (not only BNB Agent SDK) and merge schema-valid ones.',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return undefined;
+  })
+  @IsBoolean()
+  open?: boolean;
+
   @ApiPropertyOptional()
   @IsOptional()
   @Type(() => Number)

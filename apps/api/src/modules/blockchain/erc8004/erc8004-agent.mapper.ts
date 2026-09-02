@@ -12,29 +12,49 @@ import type {
   Scan8004AgentDetail,
   Scan8004ListItem,
   Scan8004MetricsPayload,
+  Scan8004ServiceSnapshot,
 } from './erc8004.types';
 import { emptyA2aHealth, a2aMetrics } from './a2a-health';
 import { slugifyAgentName } from '../../agents/agent-studio.mapper';
 
-export function scanA2aEndpoint(detail: Scan8004AgentDetail): string | null {
+export function scanA2aEndpoint(detail: Scan8004ServiceSnapshot): string | null {
   return detail.a2a_endpoint ?? detail.services?.a2a?.endpoint ?? null;
 }
 
+export function scanMcpEndpoint(detail: Scan8004ServiceSnapshot): string | null {
+  return detail.mcp_server ?? detail.services?.mcp?.endpoint ?? null;
+}
+
+export function scanHttpAgentUri(detail: Scan8004ServiceSnapshot): string | null {
+  return scanA2aEndpoint(detail) ?? scanMcpEndpoint(detail) ?? detail.agent_url ?? null;
+}
+
+export function hasDeclaredA2a(detail: Scan8004ServiceSnapshot): boolean {
+  if (scanA2aEndpoint(detail)) return true;
+  return (detail.supported_protocols ?? []).some((p) => p.toLowerCase() === 'a2a');
+}
+
+export function hasDeclaredMcp(detail: Scan8004ServiceSnapshot): boolean {
+  if (scanMcpEndpoint(detail)) return true;
+  return (detail.supported_protocols ?? []).some((p) => p.toLowerCase() === 'mcp');
+}
+
 export function scanA2aStatus(
-  detail: Scan8004AgentDetail,
+  detail: Scan8004ServiceSnapshot,
 ): A2aHealthDto['status'] {
   const status = detail.health_status?.services?.a2a?.status?.toLowerCase();
   if (status === 'healthy') return 'healthy';
   if (status === 'unhealthy' || status === 'degraded') return 'unhealthy';
-  if (!scanA2aEndpoint(detail)) return 'missing';
-  return 'unknown';
+  if (scanA2aEndpoint(detail)) return 'unknown';
+  if (hasDeclaredA2a(detail)) return 'unknown';
+  return 'missing';
 }
 
-export function scanA2aHealthy(detail: Scan8004AgentDetail): boolean {
+export function scanA2aHealthy(detail: Scan8004ServiceSnapshot): boolean {
   return scanA2aStatus(detail) === 'healthy';
 }
 
-export function mapScanA2aHealth(detail: Scan8004AgentDetail): A2aHealthDto {
+export function mapScanA2aHealth(detail: Scan8004ServiceSnapshot): A2aHealthDto {
   const status = scanA2aStatus(detail);
   return emptyA2aHealth(scanA2aEndpoint(detail), status, {
     latencyMs: detail.health_status?.services?.a2a?.latency_ms ?? null,
@@ -43,7 +63,18 @@ export function mapScanA2aHealth(detail: Scan8004AgentDetail): A2aHealthDto {
   });
 }
 
-export function isLikelyBnbAgentStudioListItem(item: Scan8004ListItem): boolean {
+export function mapScanEndpoints(detail: Scan8004ServiceSnapshot) {
+  return {
+    a2a: scanA2aEndpoint(detail),
+    mcp: scanMcpEndpoint(detail),
+    agentUrl: detail.agent_url ?? null,
+  };
+}
+
+export function isLikelyBnbAgentStudioListItem(item: {
+  name: string;
+  description?: string | null;
+}): boolean {
   const text = `${item.name} ${item.description ?? ''}`.toLowerCase();
   return (
     text.includes('bnbagent') ||
@@ -120,9 +151,13 @@ export function inferAgentCategory(
   return AgentCategory.YIELD_OPTIMISATION;
 }
 
-export function mapScanProtocols(detail: Scan8004AgentDetail): string[] {
+export function mapScanProtocols(detail: Scan8004ServiceSnapshot): string[] {
   const protocols = [...(detail.supported_protocols ?? [])];
-  const text = `${detail.name} ${detail.description ?? ''}`.toLowerCase();
+  const lower = new Set(protocols.map((p) => p.toLowerCase()));
+  const text = `${detail.name ?? ''} ${detail.description ?? ''}`.toLowerCase();
+
+  if (hasDeclaredMcp(detail) && !lower.has('mcp')) protocols.push('MCP');
+  if (hasDeclaredA2a(detail) && !lower.has('a2a')) protocols.push('A2A');
 
   if (text.includes('venus') && !protocols.includes('Venus')) protocols.push('Venus');
   if (text.includes('pancake') && !protocols.includes('PancakeSwap')) {
@@ -165,6 +200,8 @@ export function mapScanMetrics(detail: Scan8004AgentDetail): Scan8004MetricsPayl
       a2aEndpoint: scanA2aEndpoint(detail),
       a2aStatus: scanA2aStatus(detail),
       a2aHealthy: scanA2aHealthy(detail),
+      mcp: hasDeclaredMcp(detail),
+      mcpEndpoint: scanMcpEndpoint(detail),
       agentId8004: detail.agent_id,
     },
   };
@@ -213,7 +250,10 @@ export function mapScanDetailToMarketplaceAgent(
     imageUrl: external.imageUrl ?? null,
     ownerWallet: external.ownerWallet,
     agentWallet: external.agentWallet,
-    agentUri: external.agentUri,
+    agentUri:
+      external.agentUri ??
+      scanHttpAgentUri(detail) ??
+      `erc8004://${detail.chain_id}/${detail.token_id}`,
     network: chain.name,
     chainId: chain.chainId,
     isTestnet: detail.is_testnet ?? chain.isTestnet,
@@ -235,6 +275,7 @@ export function mapScanDetailToMarketplaceAgent(
     metrics: mapScanMetricsToAgentMetricsDto(detail),
     marketplaceScore: detail.total_score ?? 0,
     a2a: mapScanA2aHealth(detail),
+    endpoints: mapScanEndpoints(detail),
   };
 }
 
@@ -262,8 +303,8 @@ export function mapScanListItemToMarketplaceAgent(
   chain: Erc8004ChainContext,
 ): MarketplaceAgentDto {
   const description = item.description ?? '';
-  const protocols =
-    item.supported_protocols?.length ? [...item.supported_protocols] : ['ERC-8004'];
+  const protocols = mapScanProtocols(item);
+  const endpoints = mapScanEndpoints(item);
 
   return {
     id: item.id ?? item.agent_id,
@@ -275,7 +316,8 @@ export function mapScanListItemToMarketplaceAgent(
     imageUrl: item.image_url ?? null,
     ownerWallet: item.owner_address,
     agentWallet: item.owner_address,
-    agentUri: `erc8004://${item.chain_id}/${item.token_id}`,
+    agentUri:
+      scanHttpAgentUri(item) ?? `erc8004://${item.chain_id}/${item.token_id}`,
     network: chain.name,
     chainId: item.chain_id,
     isTestnet: item.is_testnet ?? chain.isTestnet,
@@ -296,6 +338,8 @@ export function mapScanListItemToMarketplaceAgent(
     updatedAt: item.updated_at ?? item.created_at,
     metrics: mapScanListMetrics(item),
     marketplaceScore: item.total_score ?? 0,
+    a2a: mapScanA2aHealth(item),
+    endpoints,
   };
 }
 
@@ -327,6 +371,11 @@ function mapScanListMetrics(item: Scan8004ListItem): MarketplaceAgentDto['metric
       starCount: item.star_count,
       rank: item.rank,
       x402Supported: item.x402_supported,
+      mcp: hasDeclaredMcp(item),
+      mcpEndpoint: scanMcpEndpoint(item),
+      a2aEndpoint: scanA2aEndpoint(item),
+      a2aStatus: scanA2aStatus(item),
+      a2aHealthy: scanA2aHealthy(item),
       agentId8004: item.agent_id,
     },
     updatedAt: item.updated_at ?? item.created_at,
@@ -375,7 +424,7 @@ export function mapScanAgentToExternal(
     agentWallet: detail.agent_wallet ?? detail.owner_address,
     agentUri:
       detail.raw_metadata?.offchain_uri ??
-      detail.a2a_endpoint ??
+      scanHttpAgentUri(detail) ??
       `erc8004://${detail.chain_id}/${detail.token_id}`,
     network: chain.name,
     chainId: chain.chainId,

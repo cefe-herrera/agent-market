@@ -1,0 +1,17 @@
+# Same GHCR image for both networks. NETWORK picks the chain config.
+#   NETWORK=mainnet docker compose up
+#   NETWORK=testnet docker compose up
+services:
+  facilitator:
+    image: ghcr.io/x402-rs/x402-facilitator
+    container_name: x402-facilitator
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      RUST_LOG: info
+    volumes:
+      - ./config.${NETWORK:-testnet}.json:/app/config.json:ro
+    command: ["--config", "/app/config.json"]
+    restart: unless-stopped

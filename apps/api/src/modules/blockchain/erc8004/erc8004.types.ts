@@ -24,7 +24,28 @@ export interface Scan8004PublicDetailResponse {
   data: Scan8004AgentDetail;
 }
 
-export interface Scan8004ListItem {
+export interface Scan8004HealthService {
+  latency_ms?: number;
+  status?: string;
+  message?: string;
+}
+
+export interface Scan8004ServiceSnapshot {
+  name?: string;
+  description?: string | null;
+  supported_protocols?: string[];
+  a2a_endpoint?: string | null;
+  mcp_server?: string | null;
+  agent_url?: string | null;
+  services?: Record<string, { endpoint?: string; version?: string }>;
+  health_status?: {
+    services?: Record<string, Scan8004HealthService>;
+    checked_at?: string;
+  };
+  health_checked_at?: string;
+}
+
+export interface Scan8004ListItem extends Scan8004ServiceSnapshot {
   id?: string;
   token_id: string;
   chain_id: number;
@@ -38,7 +59,6 @@ export interface Scan8004ListItem {
   image_url?: string | null;
   is_verified?: boolean;
   star_count?: number;
-  supported_protocols?: string[];
   x402_supported?: boolean;
   total_score?: number;
   health_score?: number | null;
@@ -99,6 +119,8 @@ export interface Scan8004AgentDetail {
   rank: number | null;
   services?: Record<string, { endpoint?: string; version?: string }>;
   a2a_endpoint?: string | null;
+  mcp_server?: string | null;
+  agent_url?: string | null;
   raw_metadata?: {
     offchain_uri?: string;
     onchain?: Scan8004OnchainMetadata[];

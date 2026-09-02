@@ -16,20 +16,20 @@ export default function Home() {
   const [selected, setSelected] = useState<MarketplaceAgent | null>(null);
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-6 py-10 lg:flex-row">
-      <div className="min-w-0 flex-1">
+    <div className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 items-start gap-8 px-6 py-10 md:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="min-w-0 overflow-hidden md:col-start-1 md:row-start-1">
         <AgentCatalog
           selectedId={selected?.agentId ?? null}
           onSelect={setSelected}
         />
       </div>
-      <div className="w-full shrink-0 lg:w-[26rem]">
+      <aside className="order-first w-full md:order-none md:col-start-2 md:row-start-1 md:sticky md:top-20 md:self-start">
         <WalletStatus
           selectedPayTo={selected?.agentWallet}
           selectedName={selected?.name}
           selectedAgentId={selected?.agentId}
         />
-      </div>
+      </aside>
     </div>
   );
 }

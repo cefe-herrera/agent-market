@@ -5,7 +5,7 @@ import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider, http } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useMemo, type ReactNode } from "react";
-import { BSC_TESTNET, BSC_TESTNET_RPC } from "@/app/lib/x402-usdc";
+import { x402PaymentConfig } from "@/app/lib/x402-usdc";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -36,12 +36,14 @@ const walletConnectProjectId =
   process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ??
   "8a670b98943fc13feaebf4def079310b";
 
+const payment = x402PaymentConfig();
+
 const config = getDefaultConfig({
   appName: "BNB Agent Market",
   projectId: walletConnectProjectId,
-  chains: [BSC_TESTNET],
+  chains: [payment.chain],
   transports: {
-    [BSC_TESTNET.id]: http(BSC_TESTNET_RPC),
+    [payment.chain.id]: http(payment.rpc),
   },
   ssr: false,
 });
