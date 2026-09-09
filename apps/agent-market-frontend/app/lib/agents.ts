@@ -106,8 +106,16 @@ export function isIndexerCatalogAgent(
 ): boolean {
   const chainId = mode === "testnet" ? BSC_TESTNET_CHAIN_ID : BSC_MAINNET_CHAIN_ID;
   if (agent.chainId !== chainId) return false;
-  if (mode === "testnet") return agent.isTestnet !== false;
-  return agent.isTestnet !== true;
+  if (mode === "testnet" && agent.isTestnet === false) return false;
+  if (mode !== "testnet" && agent.isTestnet === true) return false;
+  if (agent.verification && agent.verification.schemaValid === false) return false;
+  return true;
+}
+
+export function isConsumableCatalogAgent(agent: MarketplaceAgent): boolean {
+  if (agent.verification?.schemaValid) return true;
+  const endpoints = agentEndpoints(agent);
+  return isHttpUrl(endpoints.a2a) || isHttpUrl(endpoints.mcp);
 }
 
 export function shortenAddress(value: string): string {

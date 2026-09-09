@@ -1,26 +1,313 @@
+@import "./fonts.css";
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-brand-50: #f7ffe0;
+  --color-brand-100: #eeff99;
+  --color-brand-200: #e4ff66;
+  --color-brand-300: #d4ff33;
+  --color-brand-400: #ccff00;
+  --color-brand-500: #c4ff0e;
+  --color-brand-600: #b8f000;
+  --color-brand-700: #9fd600;
+  --color-brand-800: #7aad00;
+  --color-brand-900: #5c8400;
+
+  --color-surface-50: #000000;
+  --color-surface-100: #0a0a0a;
+  --color-surface-200: #1a1a1a;
+  --color-surface-300: #27272a;
+  --color-surface-400: #3f3f46;
+  --color-surface-500: #71717a;
+  --color-surface-600: #a1a1aa;
+  --color-surface-700: #d4d4d8;
+  --color-surface-800: #e4e4e7;
+  --color-surface-900: #fafafa;
+  --color-surface-950: #ffffff;
+
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-mono-data: var(--font-geist-mono), ui-monospace, monospace;
+  --font-pixel: "Geist Pixel", monospace;
+  --font-pixel-square: "Geist Pixel", monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    @apply bg-surface-50 font-sans text-surface-600 antialiased;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-brand-500) 35%, transparent);
+    color: var(--color-surface-950);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .font-pixel-square {
+    font-family: var(--font-pixel-square);
+    font-variation-settings: "ELSH" 1;
+    font-weight: 400;
+    font-synthesis: none;
+  }
+
+  .font-pixel {
+    @apply font-pixel-square;
+  }
+
+  .hero-eyebrow {
+    @apply font-mono-data inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-brand-500;
+  }
+
+  .hero-eyebrow::before {
+    content: "";
+    @apply inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500;
+    box-shadow: 0 0 10px color-mix(in srgb, var(--color-brand-500) 70%, transparent);
+  }
+
+  .hero-line-pixel {
+    @apply font-pixel-square block;
+    font-size: clamp(2rem, 6vw, 4.25rem);
+    line-height: 1.08;
+  }
+
+  .hero-line-pixel--white {
+    @apply text-surface-950;
+  }
+
+  .hero-line-pixel--accent {
+    @apply mt-2 text-brand-500;
+    text-shadow:
+      0 0 20px color-mix(in srgb, var(--color-brand-500) 50%, transparent),
+      0 0 60px color-mix(in srgb, var(--color-brand-500) 25%, transparent);
+  }
+
+  .hero-section {
+    @apply relative;
+  }
+
+  .hero-section::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: min(900px, 100%);
+    height: 420px;
+    transform: translateX(-50%);
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 70% 55% at 50% 0%,
+      color-mix(in srgb, var(--color-brand-500) 14%, transparent),
+      transparent 72%
+    );
+  }
+
+  .hero-section > * {
+    position: relative;
+  }
+
+  .label-terminal {
+    @apply font-mono-data inline-flex items-center gap-2 text-xs uppercase tracking-widest text-brand-500;
+  }
+
+  .label-terminal::before {
+    content: "";
+    @apply inline-block h-1.5 w-1.5 rounded-full bg-brand-500;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--color-brand-500) 60%, transparent);
+  }
+
+  .glow-accent {
+    text-shadow: 0 0 24px color-mix(in srgb, var(--color-brand-500) 45%, transparent);
+  }
+
+  .btn-primary {
+    @apply inline-flex cursor-pointer items-center justify-center rounded-none border-0 bg-brand-500 px-4 py-2.5 font-mono-data text-sm font-medium text-black no-underline transition;
+  }
+
+  .btn-primary:hover {
+    @apply bg-brand-400;
+    box-shadow: 0 0 20px color-mix(in srgb, var(--color-brand-500) 35%, transparent);
+  }
+
+  .btn-primary:disabled {
+    @apply cursor-not-allowed opacity-40;
+    box-shadow: none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex cursor-pointer items-center justify-center rounded-none border border-surface-300 bg-surface-100 px-4 py-2.5 font-mono-data text-sm font-medium text-surface-800 no-underline transition;
+  }
+
+  .btn-secondary:hover {
+    @apply border-surface-400 bg-surface-200 text-surface-950;
+  }
+
+  .card {
+    @apply rounded-none border border-surface-300 bg-surface-100 p-5;
+  }
+
+  .card-interactive {
+    @apply relative overflow-hidden rounded-none border border-surface-300 bg-surface-100 p-5 transition;
+    background:
+      radial-gradient(ellipse 90% 70% at 0% 0%, color-mix(in srgb, var(--color-brand-500) 10%, transparent), transparent 58%),
+      var(--color-surface-100);
+  }
+
+  .card-interactive:hover {
+    @apply border-brand-500/40;
+    box-shadow: 0 0 28px color-mix(in srgb, var(--color-brand-500) 10%, transparent);
+  }
+
+  .agent-card {
+    @apply relative flex h-full flex-col overflow-hidden rounded-none border border-surface-300 p-5 text-left transition;
+    background:
+      radial-gradient(ellipse 95% 75% at 0% 0%, color-mix(in srgb, var(--color-brand-500) 11%, transparent), transparent 60%),
+      var(--color-surface-100);
+  }
+
+  .agent-card:hover,
+  .agent-card.is-selected {
+    @apply border-brand-500/40;
+    background:
+      radial-gradient(ellipse 100% 80% at 0% 0%, color-mix(in srgb, var(--color-brand-500) 16%, transparent), transparent 55%),
+      var(--color-surface-100);
+    box-shadow: 0 0 32px color-mix(in srgb, var(--color-brand-500) 12%, transparent);
+  }
+
+  .agent-card-header {
+    @apply mb-4;
+  }
+
+  .agent-card-meta {
+    @apply mb-3 flex min-h-[22px] items-start justify-between gap-2;
+  }
+
+  .agent-card-badges {
+    @apply flex min-w-0 flex-1 flex-wrap gap-1;
+  }
+
+  .agent-card-title {
+    @apply line-clamp-2 font-mono-data text-[15px] font-semibold leading-snug text-surface-950 no-underline transition hover:text-brand-500;
+  }
+
+  .agent-card-category {
+    @apply mt-1 font-mono-data text-xs text-surface-500;
+  }
+
+  .agent-card-verified {
+    @apply ml-auto inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm bg-brand-500 text-[10px] font-bold leading-none text-black;
+  }
+
+  .agent-card-studio {
+    @apply inline-flex max-w-[70%] items-center rounded-none border border-brand-500/40 bg-brand-500/10 px-1.5 py-0.5 font-mono-data text-[9px] font-medium uppercase tracking-wide text-brand-400;
+  }
+
+  .agent-card-chain {
+    @apply inline-flex items-center rounded-none border border-surface-400/40 bg-surface-200/50 px-1.5 py-0.5 font-mono-data text-[9px] font-medium uppercase tracking-wide text-surface-600;
+  }
+
+  .agent-card-testnet {
+    @apply inline-flex items-center rounded-none border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 font-mono-data text-[9px] font-medium uppercase tracking-wide text-amber-400;
+  }
+
+  .agent-card-tags {
+    @apply mb-4 flex flex-wrap gap-1.5;
+  }
+
+  .agent-card-metrics {
+    @apply mb-5 grid flex-1 grid-cols-2 gap-x-4 gap-y-3 border-t border-surface-300 pt-4;
+  }
+
+  .agent-card-metric-label {
+    @apply font-mono-data text-[10px] uppercase tracking-wide text-surface-500;
+  }
+
+  .agent-card-metric-value {
+    @apply mt-0.5 font-mono-data text-sm font-semibold text-surface-950;
+  }
+
+  .agent-card-footer {
+    @apply mt-auto flex gap-2;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-none px-2 py-0.5 font-mono-data text-xs font-medium;
+  }
+
+  .badge-green {
+    @apply inline-flex items-center rounded-none bg-brand-500/15 px-2 py-0.5 font-mono-data text-xs font-medium text-brand-500;
+  }
+
+  .badge-yellow {
+    @apply inline-flex items-center rounded-none bg-amber-500/15 px-2 py-0.5 font-mono-data text-xs font-medium text-amber-400;
+  }
+
+  .badge-red {
+    @apply inline-flex items-center rounded-none bg-red-500/15 px-2 py-0.5 font-mono-data text-xs font-medium text-red-400;
+  }
+
+  .badge-gray {
+    @apply inline-flex items-center rounded-none border border-surface-300 bg-surface-200/50 px-2 py-0.5 font-mono-data text-xs font-medium text-surface-600;
+  }
+
+  .input-field,
+  .select-field {
+    @apply block w-full rounded-none border border-surface-300 bg-surface-50 px-3 py-2 font-mono-data text-sm text-surface-800;
+  }
+
+  .input-field::placeholder {
+    @apply text-surface-500;
+  }
+
+  .input-field:focus,
+  .select-field:focus {
+    @apply border-brand-500/60 outline-none;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-brand-500) 30%, transparent);
+  }
+
+  .stats-bar {
+    @apply grid grid-cols-2 divide-x divide-surface-300 overflow-hidden rounded-none border border-surface-300 sm:grid-cols-4;
+  }
+
+  .stat-item {
+    @apply bg-surface-100 px-6 py-5 text-center;
+  }
+
+  .stat-value {
+    @apply font-pixel-square text-2xl font-normal text-surface-950 sm:text-3xl;
+  }
+
+  .stat-label {
+    @apply font-mono-data text-xs uppercase tracking-wider text-surface-500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .section-dark {
+    @apply border-t border-surface-300 bg-surface-100/50;
+  }
+
+  .nav-link {
+    @apply font-mono-data text-sm text-surface-500 no-underline transition hover:text-surface-950;
+  }
+
+  .nav-link-active {
+    @apply text-brand-500;
+  }
+
+  .text-positive {
+    @apply text-brand-500;
+  }
+
+  .text-negative {
+    @apply text-red-400;
+  }
 }

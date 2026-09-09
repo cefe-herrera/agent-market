@@ -14,6 +14,7 @@ import {
   signExactUsdcPayment,
 } from "@/app/lib/x402-client";
 import type { AgentWork } from "@/app/lib/agent-work";
+import { newHireId, rememberHire } from "@/app/lib/hires-store";
 import FeedbackButton from "./FeedbackButton";
 
 export default function PayUsdcButton({
@@ -91,6 +92,19 @@ export default function PayUsdcButton({
       }
       setTx(result.transaction ?? "ok");
       if (result.work) setWork(result.work);
+      rememberHire({
+        id: newHireId(result.transaction),
+        rail: "x402",
+        agentId: selectedAgentId ?? null,
+        agentName: selectedName ?? null,
+        payTo,
+        amount: X402_PAYMENT_USDC,
+        asset: "$U",
+        tx: result.transaction ?? null,
+        chainId: X402_CHAIN_ID,
+        client: account,
+        createdAt: Date.now(),
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -101,7 +115,7 @@ export default function PayUsdcButton({
   return (
     <div className="mt-8 flex flex-col gap-3">
       <label className="flex flex-col gap-1 text-xs">
-        <span className="uppercase tracking-wider text-zinc-400">
+        <span className="font-mono-data uppercase tracking-wider text-surface-500">
           to · quién recibe el $U
           {selectedName ? ` · ${selectedName}` : ""}
         </span>
@@ -110,14 +124,14 @@ export default function PayUsdcButton({
           onChange={(e) => setPayToInput(e.target.value.trim())}
           placeholder="0x…"
           spellCheck={false}
-          className="h-11 rounded-lg border border-zinc-200 bg-white px-3 font-mono text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+          className="input-field h-11 text-xs"
         />
       </label>
-      <p className="font-mono text-[11px] text-zinc-500">
+      <p className="font-mono-data text-[11px] text-surface-500">
         from (pagador) = {account ?? "conectá wallet"}
       </p>
       {selfPay && (
-        <p className="text-xs text-red-600">
+        <p className="text-xs text-red-400">
           Estás firmando con la misma cuenta que `to`. Pegá otra wallet
           receptora — el facilitator solo paga gas, no tiene que ser el
           destinatario.
@@ -127,7 +141,7 @@ export default function PayUsdcButton({
         type="button"
         disabled={!ready || busy}
         onClick={onPay}
-        className="h-12 rounded-full bg-zinc-900 px-6 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+        className="btn-primary h-12 w-full px-6"
       >
         {status === "signing"
           ? "Firmá en la wallet…"
@@ -136,20 +150,20 @@ export default function PayUsdcButton({
             : `Pagar ${X402_PAYMENT_USDC} $U al agente`}
       </button>
       {!ready && !selfPay && (
-        <p className="text-xs text-amber-600">
+        <p className="text-xs text-amber-400">
           Elegí un agente, conectá la wallet en{" "}
           {X402_IS_MAINNET ? "BNB Mainnet (56)" : "BNB Testnet (97)"} y poné
           un `to` distinto al que firma.
         </p>
       )}
       {error && (
-        <pre className="whitespace-pre-wrap break-all font-mono text-xs text-red-600">
+        <pre className="whitespace-pre-wrap break-all font-mono-data text-xs text-red-400">
           {error}
         </pre>
       )}
       {tx && (
         <a
-          className="break-all font-mono text-xs text-emerald-600 underline"
+          className="break-all font-mono-data text-xs text-brand-500 underline"
           href={`${X402_EXPLORER_TX}/${tx}`}
           target="_blank"
           rel="noreferrer"
@@ -158,19 +172,21 @@ export default function PayUsdcButton({
         </a>
       )}
       {work && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
-          <p className="text-xs font-semibold">{work.agent}</p>
-          <p className="mt-1 font-mono text-[11px] text-zinc-500">
+        <div className="border border-brand-500/30 bg-brand-500/5 p-3">
+          <p className="font-mono-data text-xs font-semibold text-surface-950">
+            {work.agent}
+          </p>
+          <p className="mt-1 font-mono-data text-[11px] text-surface-500">
             {work.kind}
             {work.source ? ` · ${work.source}` : ""}
           </p>
-          <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[11px] text-zinc-800 dark:text-zinc-200">
+          <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-all font-mono-data text-[11px] text-surface-800">
             {JSON.stringify(work.json, null, 2)}
           </pre>
         </div>
       )}
       {tx && selectedAgentId && (
-        <div className="mt-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+        <div className="mt-4 border-t border-surface-300 pt-4">
           <FeedbackButton enabled agentId={selectedAgentId} />
         </div>
       )}

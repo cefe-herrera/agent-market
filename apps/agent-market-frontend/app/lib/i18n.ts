@@ -1,0 +1,121 @@
+export type Lang = "en" | "es";
+
+export const LANGUAGES: { code: Lang; label: string }[] = [
+  { code: "en", label: "EN" },
+  { code: "es", label: "ES" },
+];
+
+const en: Record<string, string> = {
+  "nav.marketplace": "Marketplace",
+  "nav.rebalancing": "Rebalancing",
+  "nav.gridTrading": "Trading Grid",
+  "nav.yield": "Yield",
+  "nav.healthFactor": "Health Factor",
+  "nav.myAgents": "My Agents",
+  "wallet.connect": "Connect Wallet",
+  "wallet.connectPrompt":
+    "Connect your wallet to view and manage your hired agents.",
+  "myAgents.title": "My Agents",
+  "myAgents.subtitle": "Manage your x402 hits and ERC-8183 escrow jobs.",
+  "myAgents.loading": "Loading your agents...",
+  "myAgents.empty": "You haven't hired any agents yet.",
+  "myAgents.browse": "Browse Marketplace",
+  "myAgents.view": "View",
+  "myAgents.capital": "Capital",
+  "myAgents.activated": "Activated",
+  "myAgents.status": "Status",
+  "myAgents.hireId": "Hire ID",
+  "myAgents.rail": "Rail",
+  "status.PAID": "Paid",
+  "status.OPEN": "Open",
+  "status.FUNDED": "Funded",
+  "status.SUBMITTED": "Submitted",
+  "status.COMPLETED": "Completed",
+  "status.REJECTED": "Rejected",
+  "status.EXPIRED": "Expired",
+  "home.badge": "AGENT MARKETPLACE",
+  "home.heroLine1": "What do you want",
+  "home.heroLine2": "your money to do?",
+  "home.subtitle":
+    "Discover, compare, and activate DeFi agents across multiple chains. Automated strategies for yield, trading, liquidity, and loan protection.",
+  "home.statAgents": "Agents",
+  "home.statCategories": "Categories",
+  "home.statChains": "Chains",
+  "home.statVerified": "Verified",
+  "home.featured": "Featured Agents",
+  "common.explore": "Explore",
+  "marketplace.badge": "DIRECTORY_01",
+  "marketplace.title": "Agent Marketplace",
+  "categoryName.REBALANCING": "Manage Liquidity",
+  "categoryName.GRID_TRADING": "Automate Trading",
+  "categoryName.YIELD_OPTIMISATION": "Earn Yield",
+  "categoryName.HEALTH_FACTOR_MONITORING": "Protect Loans",
+  "categoryTagline.REBALANCING": "Keep your liquidity positions optimally ranged",
+  "categoryTagline.GRID_TRADING": "Profit from market volatility automatically",
+  "categoryTagline.YIELD_OPTIMISATION": "Maximize returns across DeFi protocols",
+  "categoryTagline.HEALTH_FACTOR_MONITORING": "Never get liquidated unexpectedly",
+};
+
+const es: Record<string, string> = {
+  "nav.marketplace": "Mercado",
+  "nav.rebalancing": "Rebalanceo",
+  "nav.gridTrading": "Trading Grid",
+  "nav.yield": "Rendimiento",
+  "nav.healthFactor": "Factor de Salud",
+  "nav.myAgents": "Mis Agentes",
+  "wallet.connect": "Conectar Wallet",
+  "wallet.connectPrompt":
+    "Conecta tu wallet para ver y gestionar tus agentes contratados.",
+  "myAgents.title": "Mis Agentes",
+  "myAgents.subtitle": "Gestiona tus hits x402 y jobs ERC-8183 con escrow.",
+  "myAgents.loading": "Cargando tus agentes...",
+  "myAgents.empty": "Todavía no has contratado ningún agente.",
+  "myAgents.browse": "Explorar Mercado",
+  "myAgents.view": "Ver",
+  "myAgents.capital": "Capital",
+  "myAgents.activated": "Activado",
+  "myAgents.status": "Estado",
+  "myAgents.hireId": "ID de Contrato",
+  "myAgents.rail": "Riel",
+  "status.PAID": "Pagado",
+  "status.OPEN": "Abierto",
+  "status.FUNDED": "Fondeado",
+  "status.SUBMITTED": "Entregado",
+  "status.COMPLETED": "Completado",
+  "status.REJECTED": "Rechazado",
+  "status.EXPIRED": "Expirado",
+  "home.badge": "MERCADO DE AGENTES",
+  "home.heroLine1": "¿Qué quieres que",
+  "home.heroLine2": "haga tu dinero?",
+  "home.subtitle":
+    "Descubre, compara y activa agentes DeFi en múltiples chains. Estrategias automatizadas de rendimiento, trading, liquidez y protección de préstamos.",
+  "home.statAgents": "Agentes",
+  "home.statCategories": "Categorías",
+  "home.statChains": "Chains",
+  "home.statVerified": "Verificados",
+  "home.featured": "Agentes Destacados",
+  "common.explore": "Explorar",
+  "marketplace.badge": "DIRECTORIO_01",
+  "marketplace.title": "Mercado de Agentes",
+  "categoryName.REBALANCING": "Gestionar Liquidez",
+  "categoryName.GRID_TRADING": "Automatizar Trading",
+  "categoryName.YIELD_OPTIMISATION": "Generar Rendimiento",
+  "categoryName.HEALTH_FACTOR_MONITORING": "Proteger Préstamos",
+  "categoryTagline.REBALANCING":
+    "Mantén tus posiciones de liquidez en el rango óptimo",
+  "categoryTagline.GRID_TRADING":
+    "Aprovecha la volatilidad del mercado automáticamente",
+  "categoryTagline.YIELD_OPTIMISATION":
+    "Maximiza retornos entre protocolos DeFi",
+  "categoryTagline.HEALTH_FACTOR_MONITORING":
+    "Evita liquidaciones inesperadas",
+};
+
+export const DICTIONARIES: Record<Lang, Record<string, string>> = { en, es };
+
+export const CATEGORIES = [
+  { id: "REBALANCING", href: "#mercado" },
+  { id: "GRID_TRADING", href: "#mercado" },
+  { id: "YIELD_OPTIMISATION", href: "#mercado" },
+  { id: "HEALTH_FACTOR_MONITORING", href: "#mercado" },
+] as const;

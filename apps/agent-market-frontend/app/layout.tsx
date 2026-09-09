@@ -14,17 +14,32 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BNB Agent Market",
-  description: "Hire DeFi agents on BNB Chain with x402 USDC payments.",
+  title: "AgentMarket — BNB Chain DeFi Agent Marketplace",
+  description:
+    "Discover, compare, and activate DeFi agents on BNB Chain with x402 and ERC-8183.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang="es"
+      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin=""
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Geist+Pixel:ELSH@1&display=swap"
+          rel="stylesheet"
+        />
+        <meta name="color-scheme" content="dark" />
+        <meta name="theme-color" content="#000000" />
+      </head>
+      <body className="flex min-h-full flex-col bg-surface-50">
         <Providers>{children}</Providers>
       </body>
     </html>

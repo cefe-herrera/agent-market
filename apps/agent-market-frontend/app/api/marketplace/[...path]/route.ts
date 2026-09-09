@@ -8,6 +8,7 @@ import {
   marketplaceListFilters,
   resolveIndexerAgent,
 } from "@/app/lib/indexer-bnb";
+import { fetchAgentCardPreview } from "@/app/lib/agent-card";
 
 export const maxDuration = 120;
 
@@ -48,7 +49,7 @@ async function handle(path: string[], search: string): Promise<Response> {
   }
 
   if (path.length === 1 && path[0] === "stats") {
-    const result = await listIndexerAgents({ ...filters, limit: 1, page: 1 });
+    const result = await listIndexerAgents({ ...filters, usable: false, limit: 1, page: 1 });
     return Response.json({
       agents: result.total,
       categories: 0,
@@ -74,6 +75,16 @@ async function handle(path: string[], search: string): Promise<Response> {
 
   if (path[0] === "agents" && path[1]) {
     const id = path[1];
+    if (path[2] === "card") {
+      const card = await fetchAgentCardPreview(id);
+      if (!card) {
+        return Response.json(
+          { error: "No Agent Card JSON found before payment" },
+          { status: 404 },
+        );
+      }
+      return Response.json(card);
+    }
     if (path[2] === "a2a-health") {
       const health = await indexerAgentHealth(id);
       return Response.json(health);

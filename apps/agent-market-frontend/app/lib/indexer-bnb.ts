@@ -5,6 +5,7 @@ import {
   frontendBscChainId,
   isTestnetNetwork,
 } from "@/app/lib/network";
+import { listStudioScanAgents, resolveStudioScanAgent } from "@/app/lib/scan-8004";
 
 const BSC_REGISTRY =
   "0x8004a169fb4a3325136eb29fa0ceb6d2e539a432";
@@ -19,7 +20,29 @@ export type IndexerListFilters = {
   limit?: number;
   page?: number;
   search?: string;
+  usable?: boolean;
+  open?: boolean;
 };
+
+export type IndexerListResult = {
+  data: MarketplaceAgent[];
+  total: number;
+  page: number;
+  limit: number;
+  registered?: number;
+  consumable?: number;
+  filteredOut?: number;
+};
+
+type UsableCache = {
+  key: string;
+  at: number;
+  agents: MarketplaceAgent[];
+  registered: number;
+};
+
+const USABLE_TTL_MS = 120_000;
+let usableCache: UsableCache | null = null;
 
 export type IndexerAgentRow = {
   id: string;
@@ -69,7 +92,9 @@ export function indexerUrl(path: string): string {
 
 export function marketplaceListFilters(
   search: string,
-): Required<Pick<IndexerListFilters, "isTestnet" | "chainId" | "limit" | "page">> &
+): Required<
+  Pick<IndexerListFilters, "isTestnet" | "chainId" | "limit" | "page" | "usable" | "open">
+> &
   Pick<IndexerListFilters, "search"> {
   const params = new URLSearchParams(
     search.startsWith("?") ? search.slice(1) : search,
@@ -84,34 +109,45 @@ export function marketplaceListFilters(
   const page = Math.max(Number(params.get("page") ?? 1) || 1, 1);
   const q =
     params.get("search")?.trim() || params.get("q")?.trim() || undefined;
-  return { isTestnet, chainId, limit, page, search: q };
+  const usable = params.get("usable") !== "false";
+  const open = params.get("open") === "true";
+  return { isTestnet, chainId, limit, page, search: q, usable, open };
 }
 
 export function mapIndexerAgent(row: IndexerAgentRow): MarketplaceAgent {
-  const chainId = Number(row.chainId);
-  const tokenId = String(row.onchainId);
-  const registry = registryOf(row) ?? BSC_REGISTRY;
+  const hydrated = withDecodedMetadata(row);
+  const chainId = Number(hydrated.chainId);
+  const tokenId = String(hydrated.onchainId);
+  const registry = registryOf(hydrated) ?? BSC_REGISTRY;
   const agentId = `${chainId}:${registry}:${tokenId}`;
-  const name = row.name?.trim() || `Agent #${tokenId}`;
-  const description = row.description?.trim() || name;
+  const name = hydrated.name?.trim() || `Agent #${tokenId}`;
+  const description = hydrated.description?.trim() || name;
   const slug = slugify(name, tokenId);
-  const endpoints = extractEndpoints(row.metadata);
+  const endpoints = extractEndpoints(hydrated.metadata);
   const protocols = ["ERC-8004"];
   if (endpoints.a2a) protocols.push("A2A");
   if (endpoints.mcp) protocols.push("MCP");
-  const x402 = metadataHasX402(row.metadata);
-  const schemaValid = Boolean(endpoints.a2a || endpoints.mcp || endpoints.agentUrl);
+  const x402 = metadataHasX402(hydrated.metadata);
+  const factory = isFactoryNoise(hydrated);
+  const profile = isHumanProfileAgent(hydrated, endpoints);
+  const consumable = isConsumableAgent(hydrated, endpoints);
+  const schemaErrors: string[] = [];
+  if (factory) schemaErrors.push("factory noise");
+  if (profile) schemaErrors.push("human profile, not a machine endpoint");
+  if (!endpoints.a2a && !endpoints.mcp) schemaErrors.push("missing callable A2A/MCP");
+  const studioSdk = isStudioAgent(hydrated);
+  const skills = extractSkills(hydrated.metadata);
 
   return {
-    id: row.id,
+    id: hydrated.id,
     agentId,
     name,
     slug,
     description,
     shortDescription: description.slice(0, 160),
-    ownerWallet: row.ownerAddress,
-    agentWallet: row.agentWalletAddress || row.ownerAddress,
-    agentUri: row.metadataUri ?? null,
+    ownerWallet: hydrated.ownerAddress,
+    agentWallet: hydrated.agentWalletAddress || hydrated.ownerAddress,
+    agentUri: hydrated.metadataUri ?? null,
     network: chainId === BSC_TESTNET_CHAIN_ID ? "BSC Testnet" : "BSC",
     chainId,
     isTestnet: chainId === BSC_TESTNET_CHAIN_ID,
@@ -128,43 +164,51 @@ export function mapIndexerAgent(row: IndexerAgentRow): MarketplaceAgent {
       endpoint: endpoints.a2a,
       healthy: false,
       status: endpoints.a2a ? "unknown" : "missing",
-      skills: extractSkills(row.metadata),
+      skills,
       x402Support: x402 ? true : null,
       priceLabel: x402 ? "x402 $U" : null,
     },
     verification: {
-      level: schemaValid ? "schema_valid" : "registered",
+      level: consumable ? "schema_valid" : "registered",
       registered: true,
-      schemaValid,
+      schemaValid: consumable,
       live: false,
-      livePending: schemaValid,
-      schemaErrors: [],
+      livePending: consumable,
+      schemaErrors,
       liveError: null,
       priceLabel: x402 ? "x402 $U" : null,
-      skills: extractSkills(row.metadata),
-      studioSdk: false,
+      skills,
+      studioSdk,
     },
     metrics: {
       categoryMetrics: {
         mcpEndpoint: endpoints.mcp,
         a2aEndpoint: endpoints.a2a,
         x402Supported: x402,
+        factoryNoise: factory,
+        humanProfile: profile,
       },
     },
   };
 }
 
-export async function listIndexerAgents(filters: IndexerListFilters): Promise<{
-  data: MarketplaceAgent[];
-  total: number;
-  page: number;
-  limit: number;
-}> {
+export async function listIndexerAgents(filters: IndexerListFilters): Promise<IndexerListResult> {
   const chainId = filters.chainId ?? frontendBscChainId();
   const isTestnet = filters.isTestnet ?? isTestnetNetwork();
   const limit = Math.min(filters.limit ?? 100, 100);
   const page = Math.max(filters.page ?? 1, 1);
   const expectedChain = isTestnet ? BSC_TESTNET_CHAIN_ID : chainId || BSC_MAINNET_CHAIN_ID;
+  const usable = filters.usable !== false;
+
+  if (usable) {
+    return listUsableAgents({
+      ...filters,
+      chainId: expectedChain,
+      isTestnet,
+      limit,
+      page,
+    });
+  }
 
   const qs = new URLSearchParams({
     page: String(page - 1),
@@ -184,7 +228,7 @@ export async function listIndexerAgents(filters: IndexerListFilters): Promise<{
   const pageBody = json as SpringPage<IndexerAgentRow>;
   const rows = Array.isArray(pageBody.content) ? pageBody.content : [];
   const data = rows
-    .map(mapIndexerAgent)
+    .map((row) => mapIndexerAgent(withDecodedMetadata(row)))
     .filter((agent) => agent.chainId === expectedChain)
     .filter((agent) => (isTestnet ? agent.isTestnet : !agent.isTestnet));
   const indexedTotal = springTotal(pageBody);
@@ -198,6 +242,152 @@ export async function listIndexerAgents(filters: IndexerListFilters): Promise<{
     page,
     limit,
   };
+}
+
+async function listUsableAgents(filters: IndexerListFilters): Promise<IndexerListResult> {
+  const chainId = filters.chainId ?? frontendBscChainId();
+  const isTestnet = filters.isTestnet ?? isTestnetNetwork();
+  const limit = Math.min(filters.limit ?? 100, 100);
+  const page = Math.max(filters.page ?? 1, 1);
+  const cacheKey = `v2:${chainId}:${isTestnet}:${filters.open ? "open" : "studio"}:${filters.search ?? ""}`;
+  const now = Date.now();
+  let classified: MarketplaceAgent[];
+  let registered: number;
+
+  if (usableCache && usableCache.key === cacheKey && now - usableCache.at < USABLE_TTL_MS) {
+    classified = usableCache.agents;
+    registered = usableCache.registered;
+  } else {
+    const rows = filters.search
+      ? await fetchIndexerPage(filters.search, 0, 100)
+      : await fetchAllCandidateRows(Boolean(filters.open));
+    const hydrated = await hydrateCandidateRows(rows);
+    classified = hydrated
+      .map(mapIndexerAgent)
+      .filter((agent) => agent.chainId === chainId)
+      .filter((agent) => (isTestnet ? agent.isTestnet : !agent.isTestnet));
+    registered = classified.length;
+    const fromScan = await mergeStudioScanAgents(classified, chainId, isTestnet);
+    classified = fromScan;
+    usableCache = { key: cacheKey, at: now, agents: classified, registered };
+  }
+
+  const consumable = classified.filter((agent) => agent.verification?.schemaValid);
+  const offset = (page - 1) * limit;
+  return {
+    data: consumable.slice(offset, offset + limit),
+    total: consumable.length,
+    page,
+    limit,
+    registered,
+    consumable: consumable.length,
+    filteredOut: Math.max(registered - consumable.length, 0),
+  };
+}
+
+async function fetchIndexerPage(
+  search: string | undefined,
+  page: number,
+  size: number,
+): Promise<IndexerAgentRow[]> {
+  const qs = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+    sort: "createdAt,desc",
+  });
+  if (search) qs.set("q", search);
+  const path = search ? `/api/v1/search?${qs}` : `/api/v1/agents?${qs}`;
+  const { status, json } = await indexerGet(path);
+  if (status >= 400) throw new IndexerHttpError(status, json);
+  const pageBody = json as SpringPage<IndexerAgentRow>;
+  return Array.isArray(pageBody.content) ? pageBody.content : [];
+}
+
+async function fetchAllCandidateRows(open: boolean): Promise<IndexerAgentRow[]> {
+  const pages = [fetchIndexerPage(undefined, 0, 2000)];
+  if (open) {
+    for (const q of ["bnbagent", "agent-card", "a2a", "mcp", "x402"]) {
+      pages.push(fetchIndexerPage(q, 0, 40));
+    }
+  }
+  const batches = await Promise.all(pages);
+  const byId = new Map<string, IndexerAgentRow>();
+  for (const batch of batches) {
+    for (const row of batch) byId.set(row.id, row);
+  }
+  return [...byId.values()];
+}
+
+async function mergeStudioScanAgents(
+  indexed: MarketplaceAgent[],
+  chainId: number,
+  isTestnet: boolean,
+): Promise<MarketplaceAgent[]> {
+  try {
+    const scanned = await listStudioScanAgents(chainId, isTestnet);
+    const byId = new Map(indexed.map((agent) => [agent.agentId, agent]));
+    for (const item of scanned) {
+      const mapped = mapIndexerAgent({
+        id: item.id,
+        chainId: item.chainId,
+        onchainId: item.tokenId,
+        ownerAddress: item.ownerAddress,
+        name: item.name,
+        description: item.description,
+        metadataUri: item.a2a,
+        metadata: {
+          url: item.a2a,
+          x402Support: item.x402,
+          endpoints: { a2a: item.a2a, mcp: item.mcp },
+          services: [
+            ...(item.a2a ? [{ name: "A2A", endpoint: item.a2a }] : []),
+            ...(item.mcp ? [{ name: "MCP", endpoint: item.mcp }] : []),
+          ],
+        },
+      });
+      if (!mapped.verification?.schemaValid) continue;
+      if (!byId.has(mapped.agentId)) byId.set(mapped.agentId, mapped);
+    }
+    return [...byId.values()];
+  } catch {
+    return indexed;
+  }
+}
+
+async function hydrateCandidateRows(
+  rows: IndexerAgentRow[],
+): Promise<IndexerAgentRow[]> {
+  const out: IndexerAgentRow[] = [];
+  const pending: IndexerAgentRow[] = [];
+  for (const row of rows) {
+    const decoded = withDecodedMetadata(row);
+    if (shouldHydrateDetail(decoded)) pending.push(decoded);
+    else out.push(decoded);
+  }
+  const chunk = 8;
+  for (let i = 0; i < pending.length; i += chunk) {
+    const slice = pending.slice(i, i + chunk);
+    const details = await Promise.all(
+      slice.map(async (row) => {
+        try {
+          return (await fetchIndexerRow(row.id)) ?? row;
+        } catch {
+          return row;
+        }
+      }),
+    );
+    out.push(...details.map(withDecodedMetadata));
+  }
+  return out;
+}
+
+function shouldHydrateDetail(row: IndexerAgentRow): boolean {
+  if (row.metadata && hasServiceHint(row.metadata)) return false;
+  const uri = row.metadataUri ?? "";
+  if (!/^https?:\/\//i.test(uri)) return false;
+  if (looksLikeCardUri(uri)) return true;
+  if (isFactoryNoise(row) || isEvoEvoUri(uri)) return false;
+  return true;
 }
 
 export async function resolveIndexerAgent(
@@ -227,7 +417,32 @@ export async function resolveIndexerAgent(
     }
     return String(row.id) === decoded || String(row.onchainId) === decoded;
   });
-  if (!match) return null;
+  if (!match) {
+    if (erc) {
+      const scanned = await resolveStudioScanAgent(Number(erc[1]), erc[3]);
+      return scanned
+        ? mapIndexerAgent({
+            id: scanned.id,
+            chainId: scanned.chainId,
+            onchainId: scanned.tokenId,
+            ownerAddress: scanned.ownerAddress,
+            name: scanned.name,
+            description: scanned.description,
+            metadataUri: scanned.a2a,
+            metadata: {
+              url: scanned.a2a,
+              x402Support: scanned.x402,
+              endpoints: { a2a: scanned.a2a, mcp: scanned.mcp },
+              services: [
+                ...(scanned.a2a ? [{ name: "A2A", endpoint: scanned.a2a }] : []),
+                ...(scanned.mcp ? [{ name: "MCP", endpoint: scanned.mcp }] : []),
+              ],
+            },
+          })
+        : null;
+    }
+    return null;
+  }
   return fetchIndexerDetail(match.id);
 }
 
@@ -289,10 +504,15 @@ export class IndexerHttpError extends Error {
 }
 
 async function fetchIndexerDetail(uuid: string): Promise<MarketplaceAgent | null> {
+  const row = await fetchIndexerRow(uuid);
+  return row ? mapIndexerAgent(row) : null;
+}
+
+async function fetchIndexerRow(uuid: string): Promise<IndexerAgentRow | null> {
   const { status, json } = await indexerGet(`/api/v1/agents/${uuid}`);
   if (status === 404) return null;
   if (status >= 400) throw new IndexerHttpError(status, json);
-  return mapIndexerAgent(json as IndexerAgentRow);
+  return json as IndexerAgentRow;
 }
 
 async function indexerGet(path: string): Promise<{ status: number; json: unknown }> {
@@ -336,6 +556,109 @@ export async function indexerAgentReputation(id: string): Promise<{
   };
 }
 
+function withDecodedMetadata(row: IndexerAgentRow): IndexerAgentRow {
+  if (row.metadata && Object.keys(row.metadata).length > 0) return row;
+  const decoded = decodeInlineMetadata(row.metadataUri);
+  return decoded ? { ...row, metadata: decoded } : row;
+}
+
+function decodeInlineMetadata(uri: string | null | undefined): Record<string, unknown> | null {
+  if (!uri) return null;
+  const dataJson = uri.match(/^data:application\/json(?:;charset=[^;,]+)?(;base64)?,(.+)$/i);
+  if (!dataJson) return null;
+  try {
+    const payload = dataJson[1]
+      ? Buffer.from(dataJson[2], "base64").toString("utf8")
+      : decodeURIComponent(dataJson[2]);
+    const parsed = JSON.parse(payload) as unknown;
+    return asRecord(parsed);
+  } catch {
+    return null;
+  }
+}
+
+function isFactoryNoise(row: IndexerAgentRow): boolean {
+  const name = (row.name ?? "").trim();
+  const description = (row.description ?? "").trim();
+  const uri = (row.metadataUri ?? "").toLowerCase();
+  if (name.toLowerCase().endsWith(".agent")) return true;
+  if (/on termix platform\s*$/i.test(description)) return true;
+  if (uri.includes("termix")) return true;
+  if (!name || /^agent #\d+$/i.test(name)) return true;
+  return false;
+}
+
+function isEvoEvoUri(uri: string | null | undefined): boolean {
+  return (uri ?? "").toLowerCase().includes("evoevo.ai");
+}
+
+function looksLikeCardUri(uri: string | null | undefined): boolean {
+  const value = (uri ?? "").toLowerCase();
+  return value.includes("agent-card") || value.includes(".well-known/");
+}
+
+function hasServiceHint(metadata: Record<string, unknown>): boolean {
+  return Boolean(
+    extractEndpoints(metadata).a2a ||
+      extractEndpoints(metadata).mcp ||
+      Array.isArray(metadata.services) ||
+      asRecord(metadata.services) ||
+      asRecord(metadata.endpoints),
+  );
+}
+
+function isStudioAgent(row: IndexerAgentRow): boolean {
+  const blob = `${row.name ?? ""} ${row.description ?? ""} ${row.metadataUri ?? ""} ${JSON.stringify(row.metadata ?? {})}`.toLowerCase();
+  return blob.includes("bnbagent") || blob.includes("bnb-chain/bnbagent-sdk");
+}
+
+function isHumanProfileAgent(
+  row: IndexerAgentRow,
+  endpoints: { a2a: string | null; mcp: string | null; agentUrl: string | null },
+): boolean {
+  if (isEvoEvoUri(row.metadataUri) && !endpoints.a2a && !endpoints.mcp) return true;
+  const url = endpoints.agentUrl ?? "";
+  return isHumanProfileUrl(url) && !endpoints.a2a && !endpoints.mcp;
+}
+
+function isConsumableAgent(
+  row: IndexerAgentRow,
+  endpoints: { a2a: string | null; mcp: string | null },
+): boolean {
+  if (isFactoryNoise(row) && !looksLikeCardUri(row.metadataUri)) return false;
+  return isCallableUrl(endpoints.a2a) || isCallableUrl(endpoints.mcp);
+}
+
+function isCallableUrl(value: string | null | undefined): value is string {
+  if (!value || !/^https?:\/\//i.test(value)) return false;
+  if (value.includes("{") || value.includes("%7B")) return false;
+  const url = value.toLowerCase();
+  if (url.includes(".example") || url.includes("example.com")) return false;
+  if (url.includes("amazoncognito.com") || url.includes("/oauth2/")) return false;
+  if (url.includes("/login") || url.includes("/signin")) return false;
+  if (url.includes("accounts.google.com") || url.includes("github.com/")) return false;
+  if (url.includes("twitter.com") || url.includes("linkedin.com")) return false;
+  if (isHumanProfileUrl(value)) return false;
+  return true;
+}
+
+function isHumanProfileUrl(url: string): boolean {
+  const value = url.toLowerCase();
+  if (value.includes("evoevo.ai/agent/")) return true;
+  if (value.includes("evoevo.ai") && !isAgentServiceUrl(value)) return true;
+  if (
+    (value.includes("termix.live") || value.includes("termix.ai")) &&
+    !isAgentServiceUrl(value)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function isAgentServiceUrl(url: string): boolean {
+  return /\/a2a\b|\/mcp\b|agent-card|well-known|jsonrpc|\.json(\?|$)/i.test(url);
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -354,23 +677,27 @@ function extractEndpoints(metadata: unknown): {
   const endpoints = asRecord(raw.endpoints) ?? asRecord(nested?.endpoints);
   const fromServices = serviceEndpoints(raw.services ?? nested?.services);
   const extra = extraInterfaceUrl(raw, nested);
-  const a2a =
+  const a2aRaw =
     stringUrl(endpoints?.a2a) ??
     fromServices.a2a ??
     stringUrl(raw.a2a_endpoint) ??
     extra.a2a ??
-    stringUrl(raw.url) ??
-    stringUrl(nested?.url);
-  const mcp =
+    (isAgentServiceUrl(String(raw.url ?? nested?.url ?? ""))
+      ? stringUrl(raw.url) ?? stringUrl(nested?.url)
+      : null);
+  const mcpRaw =
     stringUrl(endpoints?.mcp) ??
     fromServices.mcp ??
     stringUrl(raw.mcp_server) ??
     extra.mcp;
+  const a2a = isCallableUrl(a2aRaw) ? a2aRaw : null;
+  const mcp = isCallableUrl(mcpRaw) ? mcpRaw : null;
+  const agentUrlRaw =
+    fromServices.agentUrl ?? stringUrl(raw.url) ?? stringUrl(nested?.url);
   return {
     a2a,
     mcp,
-    agentUrl:
-      fromServices.agentUrl ?? stringUrl(raw.url) ?? stringUrl(nested?.url),
+    agentUrl: agentUrlRaw,
   };
 }
 

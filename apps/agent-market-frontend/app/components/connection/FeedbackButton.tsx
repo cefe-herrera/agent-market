@@ -73,19 +73,19 @@ export default function FeedbackButton({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="font-mono text-[11px] text-zinc-500">
+      <p className="font-mono-data text-[11px] text-surface-500">
         agentId {agentId}
         {tokenId ? ` · ERC-8004 #${tokenId}` : ""}
         {owner ? ` · owner ${String(owner)}` : ""}
       </p>
       {!tokenId && (
-        <p className="text-xs text-zinc-500">
+        <p className="font-mono-data text-xs text-surface-500">
           Este seller usa id dinámico de catálogo. Feedback on-chain queda
           para cuando el agente tenga token ERC-8004.
         </p>
       )}
       {selfFeedback && (
-        <p className="text-xs text-red-600">
+        <p className="text-xs text-red-400">
           El registry no deja self-feedback. Conectá una wallet distinta al
           owner y volvé a pagar / puntuar.
         </p>
@@ -95,14 +95,14 @@ export default function FeedbackButton({
           type="button"
           disabled={!ready || isPending}
           onClick={onFeedback}
-          className="h-11 rounded-full border border-zinc-300 px-6 text-sm font-semibold disabled:opacity-40"
+          className="btn-secondary h-11 w-full"
         >
           {isPending ? "Escribí en el registry…" : "Dejar feedback ERC-8004 (100)"}
         </button>
       )}
       {hash && (
         <a
-          className="break-all font-mono text-xs text-emerald-600 underline"
+          className="break-all font-mono-data text-xs text-brand-500 underline"
           href={`https://testnet.bscscan.com/tx/${hash}`}
           target="_blank"
           rel="noreferrer"
@@ -111,7 +111,7 @@ export default function FeedbackButton({
         </a>
       )}
       {error && (
-        <pre className="whitespace-pre-wrap break-all font-mono text-xs text-red-600">
+        <pre className="whitespace-pre-wrap break-all font-mono-data text-xs text-red-400">
           {error}
         </pre>
       )}

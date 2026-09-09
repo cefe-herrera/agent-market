@@ -14,6 +14,7 @@ import {
 import { demoMarketplaceAgents } from "@/app/lib/demo-agents";
 import { frontendBscChainId, frontendNetworkMode } from "@/app/lib/network";
 import { X402_PAYMENT_USDC } from "@/app/lib/x402-usdc";
+import type { HeroStats } from "@/app/components/home/Hero";
 
 const DEMO_AGENTS = demoMarketplaceAgents();
 
@@ -29,12 +30,16 @@ type A2aHealth = {
 export default function AgentCatalog({
   selectedId,
   onSelect,
+  onStats,
 }: {
   selectedId: string | null;
   onSelect: (agent: MarketplaceAgent) => void;
+  onStats?: (stats: HeroStats) => void;
 }) {
   const [agents, setAgents] = useState<MarketplaceAgent[]>([]);
   const [total, setTotal] = useState(0);
+  const [registered, setRegistered] = useState<number | null>(null);
+  const [filteredOut, setFilteredOut] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [health, setHealth] = useState<Record<string, A2aHealth>>({});
@@ -62,6 +67,9 @@ export default function AgentCatalog({
       | {
           data?: MarketplaceAgent[];
           total?: number;
+          registered?: number;
+          consumable?: number;
+          filteredOut?: number;
           error?: string;
           details?: string;
           message?: unknown;
@@ -90,7 +98,15 @@ export default function AgentCatalog({
       !Array.isArray(payload) && typeof payload?.total === "number"
         ? payload.total
         : listed.length;
-    return { listed, total };
+    const registered =
+      !Array.isArray(payload) && typeof payload?.registered === "number"
+        ? payload.registered
+        : null;
+    const filteredOut =
+      !Array.isArray(payload) && typeof payload?.filteredOut === "number"
+        ? payload.filteredOut
+        : null;
+    return { listed, total, registered, filteredOut };
   }
 
   useEffect(() => {
@@ -101,10 +117,18 @@ export default function AgentCatalog({
       setOpenScan(false);
       setOpenAdded(null);
       try {
-        const { listed, total } = await fetchCatalog(false);
+        const { listed, total, registered, filteredOut } = await fetchCatalog(false);
         if (!cancelled) {
           setAgents(listed);
           setTotal(total);
+          setRegistered(registered);
+          setFilteredOut(filteredOut);
+          onStats?.({
+            agents: listed.length,
+            categories: 4,
+            chains: 1,
+            verified: listed.filter((agent) => agent.verified).length,
+          });
         }
       } catch (err) {
         if (!cancelled) {
@@ -125,9 +149,11 @@ export default function AgentCatalog({
     setError(null);
     try {
       const previousIds = new Set(agents.map((agent) => agent.agentId));
-      const { listed, total } = await fetchCatalog(true);
+      const { listed, total, registered, filteredOut } = await fetchCatalog(true);
       setAgents(listed);
       setTotal(total);
+      setRegistered(registered);
+      setFilteredOut(filteredOut);
       setOpenScan(true);
       setOpenAdded(
         listed.filter((agent) => !previousIds.has(agent.agentId)).length,
@@ -191,23 +217,25 @@ export default function AgentCatalog({
     <section className="w-full min-w-0 overflow-hidden">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
+          <p className="label-terminal">
             {isTestnet ? "BSC testnet · chain 97" : "BNB Chain · 56"}
           </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+          <h3 className="mt-2 font-pixel-square text-xl text-surface-950">
             Agentes
-          </h1>
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+          </h3>
+          <p className="mt-2 max-w-2xl font-mono-data text-sm text-surface-500">
             {isTestnet
-              ? "Registered (ERC-8004 + BNB Agent SDK) → Schema (Agent Card) → Live (cron al endpoint). Schema fail = fuera."
-              : "Solo BNB Chain (56). Registered → Schema-valid Agent Card → Live. El botón busca más en 8004scan A2A/MCP de esta cadena. Login/OAuth no cuenta."}
+              ? "Registered (ERC-8004) → consumible (A2A/MCP invocable). Factories Termix, perfiles EvoEvo y OAuth no entran."
+              : "Solo BNB Chain (56). Consumible = Agent Card con A2A/MCP de máquina. Termix .agent, EvoEvo web y placeholders quedan afuera."}
           </p>
         </div>
       </div>
 
       {isTestnet && (
         <>
-          <h2 className="mt-8 text-sm font-semibold">Demo</h2>
+          <h2 className="mt-8 font-mono-data text-xs uppercase tracking-wider text-brand-500">
+            Demo
+          </h2>
           <AgentList
             agents={DEMO_AGENTS}
             selectedId={selectedId}
@@ -218,19 +246,27 @@ export default function AgentCatalog({
       )}
 
       <div className="mt-10 flex flex-wrap items-end justify-between gap-3">
-        <h2 className="text-sm font-semibold">Schema-valid</h2>
+        <h2 className="font-mono-data text-xs uppercase tracking-wider text-brand-500">
+          Consumibles
+        </h2>
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-xs text-zinc-500">
+          <p className="font-mono-data text-xs uppercase tracking-wider text-surface-500">
             {agents.length === total
               ? `${agents.length} listados`
               : `${agents.length} de ${total} listados`}
-            {openScan ? " · catálogo ampliado" : ""}
+            {registered != null
+              ? ` · ${registered} registrados`
+              : ""}
+            {filteredOut
+              ? ` · ${filteredOut} filtrados`
+              : ""}
+            {openScan ? " · búsqueda ampliada" : ""}
           </p>
           <button
             type="button"
             onClick={() => void expandOpenCatalog()}
             disabled={loading || expanding}
-            className="rounded-full border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-800 hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200"
+            className="btn-secondary !px-3 !py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
           >
             {expanding
               ? "Buscando agentes operables…"
@@ -241,29 +277,32 @@ export default function AgentCatalog({
         </div>
       </div>
       {expanding && (
-        <p className="mt-3 text-sm text-zinc-500">
-          Escaneando 8004scan por Agent Cards (A2A/MCP, no solo BNB Agent SDK).
-          Puede tardar un minuto. Login/OAuth y factories Termix no entran.
+        <p className="mt-3 font-mono-data text-sm text-surface-500">
+          Buscando A2A/MCP invocables en el indexer (sin factories Termix ni perfiles web).
         </p>
       )}
       {!expanding && openScan && openAdded !== null && (
-        <p className="mt-3 text-sm text-zinc-500">
+        <p className="mt-3 font-mono-data text-sm text-surface-500">
           {openAdded > 0
-            ? `Se agregaron ${openAdded} agentes schema-valid fuera del SDK.`
-            : "No hubo más Agent Cards schema-valid en este scan. 8004scan está lleno de registros sin card JSON invocable."}
+            ? `Se agregaron ${openAdded} agentes consumibles.`
+            : "No hubo más A2A/MCP invocables. El indexer está lleno de Termix/EvoEvo sin endpoint de máquina."}
         </p>
       )}
       {loading && (
-        <p className="mt-4 text-sm text-zinc-500">Cargando 8004scan…</p>
+        <p className="mt-4 font-mono-data text-sm text-surface-500">
+          Filtrando agentes consumibles…
+        </p>
       )}
       {error && (
-        <p className="mt-4 text-sm text-red-600 whitespace-pre-wrap">{error}</p>
+        <p className="mt-4 whitespace-pre-wrap font-mono-data text-sm text-red-400">
+          {error}
+        </p>
       )}
       {!loading && !error && agents.length === 0 && (
-        <p className="mt-4 text-sm text-zinc-500">
+        <p className="mt-4 font-mono-data text-sm text-surface-500">
           {isTestnet
             ? "No hay agentes schema-valid en testnet ahora."
-            : "Ningún agente pasó schema-valid (Agent Card con endpoint, capabilities y precio declarado)."}
+            : "Ningún agente del indexer tiene A2A/MCP invocable. Se filtraron factories Termix, perfiles EvoEvo y registros sin endpoint."}
         </p>
       )}
       <AgentList
@@ -305,7 +344,7 @@ function AgentList({
   onViewEndpoint?: (agent: MarketplaceAgent) => void;
 }) {
   return (
-    <ul className="mt-3 grid min-w-0 gap-3">
+    <ul className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
       {agents.map((agent) => {
         const selected = selectedId === agent.agentId;
         const live = health[agent.agentId];
@@ -328,52 +367,61 @@ function AgentList({
             <button
               type="button"
               onClick={() => onSelect(agent)}
-              className={`w-full rounded-2xl border p-4 text-left transition ${
-                selected
-                  ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
-                  : "border-zinc-200 bg-white hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950"
-              }`}
+              className={`agent-card w-full ${selected ? "is-selected" : ""}`}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">{agent.name}</p>
-                  <p
-                    className={`mt-1 text-xs ${selected ? "text-zinc-300 dark:text-zinc-600" : "text-zinc-500"}`}
-                  >
-                    {agent.shortDescription}
-                  </p>
+              <div className="agent-card-meta">
+                <div className="agent-card-badges">
+                  <span className="agent-card-studio">ERC-8004</span>
+                  {!demo && agent.network && (
+                    <span
+                      className={
+                        agent.isTestnet
+                          ? "agent-card-testnet"
+                          : "agent-card-chain"
+                      }
+                    >
+                      {agent.network}
+                    </span>
+                  )}
                 </div>
-                <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider">
-                  {demo
-                    ? agent.slug
-                    : `#${agent.agentId.split(":").at(-1)}`}
-                </span>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {!demo && agent.network && (
-                  <Badge selected={selected} label={agent.network} />
+                {agent.verified && (
+                  <span className="agent-card-verified" aria-label="verified">
+                    ✓
+                  </span>
                 )}
+              </div>
+              <header className="agent-card-header">
+                <p className="agent-card-title">{agent.name}</p>
+                <p className="agent-card-category">
+                  {agent.shortDescription ||
+                    (demo ? agent.slug : `#${agent.agentId.split(":").at(-1)}`)}
+                </p>
+              </header>
+              <div className="agent-card-tags">
                 {protocolBadges.map((p) => (
-                  <Badge key={p} selected={selected} label={p} />
+                  <span key={p} className="badge-gray">
+                    {p}
+                  </span>
                 ))}
+                {!demo &&
+                  levels.map((label) => (
+                    <span key={label} className="badge-green">
+                      {label}
+                    </span>
+                  ))}
                 {!demo && (
-                  <>
-                    {levels.map((label) => (
-                      <Badge key={label} selected={selected} label={label} />
-                    ))}
-                    <Badge selected={selected} label={hasMcp ? "MCP" : "sin MCP"} />
-                  </>
+                  <span className={hasMcp ? "badge-green" : "badge-gray"}>
+                    {hasMcp ? "MCP" : "sin MCP"}
+                  </span>
                 )}
-                {x402 && <Badge selected={selected} label="x402 $U" />}
-                {usagePrice && <Badge selected={selected} label={usagePrice} />}
-                {demo && <Badge selected={selected} label="JSON fijo" />}
+                {x402 && <span className="badge-green">x402 $U</span>}
+                {usagePrice && <span className="badge-gray">{usagePrice}</span>}
+                {demo && <span className="badge-gray">JSON fijo</span>}
                 {placeholder && (
-                  <Badge selected={selected} label="placeholder URL" />
+                  <span className="badge-yellow">placeholder URL</span>
                 )}
               </div>
-              <p
-                className={`mt-3 font-mono text-[11px] ${selected ? "text-zinc-400 dark:text-zinc-600" : "text-zinc-400"}`}
-              >
+              <p className="font-mono-data text-[11px] text-surface-500">
                 {shortenAddress(agent.agentWallet)}
               </p>
             </button>
@@ -381,7 +429,9 @@ function AgentList({
               <EndpointLink label="MCP" href={endpoints.mcp} />
               <EndpointLink label="A2A" href={endpoints.a2a} />
               {agent.agentId in endpointView && !shownUrl && (
-                <p className="text-[11px] text-zinc-400">sin endpoint A2A/MCP</p>
+                <p className="font-mono-data text-[11px] text-surface-500">
+                  sin endpoint A2A/MCP
+                </p>
               )}
             </div>
             {(onCheckHealth || onViewEndpoint) && (
@@ -391,7 +441,7 @@ function AgentList({
                     type="button"
                     disabled={loadingEndpoint === agent.agentId}
                     onClick={() => onViewEndpoint(agent)}
-                    className="px-2 py-1 text-[11px] text-zinc-500 underline disabled:opacity-40"
+                    className="px-2 py-1 font-mono-data text-[11px] text-brand-500 underline disabled:opacity-40"
                   >
                     {loadingEndpoint === agent.agentId
                       ? "buscando endpoint…"
@@ -403,7 +453,7 @@ function AgentList({
                     type="button"
                     disabled={checking === agent.agentId}
                     onClick={() => onCheckHealth(agent)}
-                    className="px-2 py-1 text-[11px] text-zinc-500 underline disabled:opacity-40"
+                    className="px-2 py-1 font-mono-data text-[11px] text-brand-500 underline disabled:opacity-40"
                   >
                     {checking === agent.agentId ? "probing A2A…" : "chequear A2A"}
                   </button>
@@ -424,7 +474,7 @@ function EndpointLink({ label, href }: { label: string; href: string | null }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="block max-w-full truncate font-mono text-[11px] text-sky-700 underline dark:text-sky-400"
+      className="block max-w-full truncate font-mono-data text-[11px] text-brand-500 underline"
       title={href}
     >
       {label}: {href}
@@ -432,22 +482,3 @@ function EndpointLink({ label, href }: { label: string; href: string | null }) {
   );
 }
 
-function Badge({
-  label,
-  selected,
-}: {
-  label: string;
-  selected: boolean;
-}) {
-  return (
-    <span
-      className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
-        selected
-          ? "bg-white/15 text-white dark:bg-zinc-900/10 dark:text-zinc-900"
-          : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-      }`}
-    >
-      {label}
-    </span>
-  );
-}
