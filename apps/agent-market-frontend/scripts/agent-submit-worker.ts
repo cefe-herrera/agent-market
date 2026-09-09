@@ -33,14 +33,16 @@ function loadEnvLocal() {
 
 loadEnvLocal();
 
-const BASE = (process.env.AGENT_WORKER_URL ?? "").replace(/\/$/, "");
-if (!BASE) {
-  throw new Error("Missing AGENT_WORKER_URL in env");
+function requireEnv(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`Missing ${name} in env`);
+  }
+  return value;
 }
-const SUBMIT = process.env.NEXT_PUBLIC_AGENT_8183_SUBMIT_API?.trim();
-if (!SUBMIT) {
-  throw new Error("Missing NEXT_PUBLIC_AGENT_8183_SUBMIT_API in env");
-}
+
+const BASE = requireEnv("AGENT_WORKER_URL").replace(/\/$/, "");
+const SUBMIT = requireEnv("NEXT_PUBLIC_AGENT_8183_SUBMIT_API");
 const SECRET = process.env.AGENT_WORKER_SECRET ?? "";
 const INTERVAL_MS = Number(process.env.AGENT_WORKER_INTERVAL_MS ?? 15_000);
 
