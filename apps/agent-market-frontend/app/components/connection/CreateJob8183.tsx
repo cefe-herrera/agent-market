@@ -19,6 +19,7 @@ import {
   settle,
   type Erc8183Wallet,
 } from "@/app/lib/erc8183/write";
+import { apiV1 } from "@/app/lib/api";
 import { isGeminiAgentId } from "@/app/lib/gemini/ids";
 
 const STEPS = ["checking", "bundling", "creating", "funding", "done"] as const;
@@ -87,7 +88,9 @@ export default function CreateJob8183({
             cache: "no-store",
           }),
           fetch(
-            `/api/marketplace/agents/${encodeURIComponent(selectedAgentId)}/card`,
+            apiV1(
+              `/marketplace/agents/${encodeURIComponent(selectedAgentId)}/card`,
+            ),
             { cache: "no-store" },
           ),
         ]);

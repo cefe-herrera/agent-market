@@ -1,3 +1,4 @@
+import { apiV1 } from "@/app/lib/api";
 import { X402_PAY_TO } from "@/app/lib/x402-usdc";
 import { frontendBscChainId, frontendNetworkMode } from "@/app/lib/network";
 import type { MarketplaceAgent } from "@/app/lib/agents";
@@ -35,7 +36,7 @@ export function geminiMarketplaceAgents(): MarketplaceAgent[] {
       shortDescription: "Yield optimisation · live venues",
       ownerWallet: X402_PAY_TO,
       agentWallet: X402_PAY_TO,
-      agentUri: `/api/agent/resource?seller=${YIELD_AGENT_ID}`,
+      agentUri: `${apiV1("/agent/resource")}?seller=${YIELD_AGENT_ID}`,
       network: testnet ? "BSC Testnet" : "BNB Chain",
       chainId,
       isTestnet: testnet,
@@ -43,7 +44,7 @@ export function geminiMarketplaceAgents(): MarketplaceAgent[] {
       supportedAssets: ["U"],
       verified: true,
       a2a: {
-        endpoint: `/api/agent/resource?seller=${YIELD_AGENT_ID}`,
+        endpoint: `${apiV1("/agent/resource")}?seller=${YIELD_AGENT_ID}`,
         healthy: true,
         status: "gemini",
         skills: ["yield"],

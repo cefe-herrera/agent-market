@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiV1 } from "@/app/lib/api";
 import { merchantCardFromListing } from "@/app/lib/merchant/card";
 import { getPublicMerchant } from "@/app/lib/merchant/server-store";
 
@@ -11,8 +12,7 @@ export async function GET(
   if (!listing) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
-  const origin = new URL(_req.url).origin;
-  const resource = `${origin}/api/agent/resource?seller=${encodeURIComponent(listing.agentId)}`;
+  const resource = `${apiV1("/agent/resource")}?seller=${encodeURIComponent(listing.agentId)}`;
   return NextResponse.json(
     merchantCardFromListing(listing, listing.a2a || resource),
   );
