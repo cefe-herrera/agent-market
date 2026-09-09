@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import dynamic from "next/dynamic";
 import SellWizard from "@/app/components/sell/SellWizard";
 import { useI18n } from "@/app/context/I18nProvider";
@@ -23,7 +24,13 @@ export default function SellPage() {
       <div className="mb-6">
         <ConnectWallet />
       </div>
-      <SellWizard />
+      <Suspense
+        fallback={
+          <p className="font-mono-data text-sm text-surface-500">cargando…</p>
+        }
+      >
+        <SellWizard />
+      </Suspense>
     </div>
   );
 }

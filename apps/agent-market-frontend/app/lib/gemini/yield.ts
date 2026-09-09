@@ -3,6 +3,7 @@ import "server-only";
 import { getYieldCard } from "@/app/lib/yield/snapshot";
 import { geminiJson, isGeminiConfigured } from "./client";
 import { YIELD_AGENT_ID } from "./ids";
+import { YIELD_SKILLS, formatSkillsForPrompt, skillIds } from "./skills";
 
 export { YIELD_AGENT_ID };
 
@@ -65,22 +66,24 @@ export async function runYieldOptimiser(
     return {
       ...fallbackYield(input),
       card,
+      skills: YIELD_SKILLS,
+      usedSkills: skillIds(),
     };
   }
 
   const prompt = [
     "You are a BNB Chain (BSC) DeFi yield-routing agent.",
     "Category: YIELD_OPTIMISATION. Advisory only — do not claim you moved funds.",
+    formatSkillsForPrompt(YIELD_SKILLS),
     "Ground allocations in this live snapshot (Venus API, GeckoTerminal Pancake V3 volume, Lista simulated 7-11%):",
     JSON.stringify(card, null, 2),
     "Prefer these venues:",
     ...VENUES.map((v) => `- ${v}`),
-    "Pancake APR is a volume×fee/TVL estimate, not guaranteed LP return.",
-    "Lista slisBNB is simulated in the 7–11% band — do not treat it as an on-chain read.",
     "Weights must sum to 10000 bps. Use $U / USDT / BNB as the capital box.",
     "Return ONLY JSON with keys:",
     "category, chain, executed (false), capital {asset, amount}, blendedApr,",
-    "allocations [{venue, weightBps, apr, why}], risks[], nextCheckHours, disclaimer.",
+    "allocations [{venue, weightBps, apr, why, skill}], usedSkills[],",
+    "risks[], nextCheckHours, disclaimer.",
     `Capital hint: ${input.capital || "1000 U"}.`,
     `User task: ${input.task || "Route idle stablecoins to the highest available APR on BSC with conservative risk."}`,
     input.payer ? `Payer (do not leak extra PII): ${input.payer}` : "",
@@ -100,6 +103,7 @@ export async function runYieldOptimiser(
       task: input.task ?? null,
       jobId: input.jobId ?? null,
       card,
+      skills: YIELD_SKILLS,
     };
   } catch (err) {
     const fallback = fallbackYield(input);
@@ -108,6 +112,8 @@ export async function runYieldOptimiser(
       model: "fallback-after-gemini-error",
       error: err instanceof Error ? err.message : String(err),
       card,
+      skills: YIELD_SKILLS,
+      usedSkills: skillIds(),
     };
   }
 }

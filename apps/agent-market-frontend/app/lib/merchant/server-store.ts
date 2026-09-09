@@ -1,10 +1,15 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { getAddress, isAddress } from "viem";
-import type { PublicMerchant } from "./types";
+import { getAddress, isAddress, type Address } from "viem";
+import { merchantMatchesId, type PublicMerchant } from "./types";
 
 function filePath() {
   return join(process.cwd(), ".data", "merchants.json");
+}
+
+function asAddress(value: string | null | undefined): Address | null {
+  if (!value || !isAddress(value)) return null;
+  return getAddress(value);
 }
 
 export function listPublicMerchants(): PublicMerchant[] {
@@ -18,31 +23,33 @@ export function listPublicMerchants(): PublicMerchant[] {
 }
 
 export function getPublicMerchant(id: string): PublicMerchant | null {
-  const needle = decodeURIComponent(id).toLowerCase();
   return (
-    listPublicMerchants().find(
-      (item) =>
-        item.agentId.toLowerCase() === needle ||
-        item.tokenId === id ||
-        item.owner.toLowerCase() === needle,
-    ) ?? null
+    listPublicMerchants().find((item) => merchantMatchesId(item, id)) ?? null
   );
 }
 
 export function upsertPublicMerchant(input: PublicMerchant): PublicMerchant {
-  if (!isAddress(input.owner) || !isAddress(input.payTo) || !isAddress(input.provider8183)) {
-    throw new Error("owner / payTo / provider8183 must be addresses");
+  if (!isAddress(input.owner) || !isAddress(input.payTo)) {
+    throw new Error("owner / payTo must be addresses");
+  }
+  if (input.provider8183 && !isAddress(input.provider8183)) {
+    throw new Error("provider8183 must be an address");
+  }
+  if (input.sessionAddress && !isAddress(input.sessionAddress)) {
+    throw new Error("sessionAddress must be an address");
   }
   const listing: PublicMerchant = {
     ...input,
     owner: getAddress(input.owner),
     payTo: getAddress(input.payTo),
-    provider8183: getAddress(input.provider8183),
-    sessionAddress: getAddress(input.sessionAddress),
+    provider8183: asAddress(input.provider8183),
+    sessionAddress: asAddress(input.sessionAddress),
     createdAt: input.createdAt || Date.now(),
   };
   const rest = listPublicMerchants().filter(
-    (item) => item.agentId !== listing.agentId,
+    (item) =>
+      item.agentId !== listing.agentId &&
+      !(listing.catalogId && item.catalogId === listing.catalogId),
   );
   const next = [listing, ...rest].slice(0, 100);
   mkdirSync(join(process.cwd(), ".data"), { recursive: true });

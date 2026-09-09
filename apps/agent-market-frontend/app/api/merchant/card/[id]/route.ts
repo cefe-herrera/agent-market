@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { apiV1 } from "@/app/lib/api";
 import { merchantCardFromListing } from "@/app/lib/merchant/card";
 import { getPublicMerchant } from "@/app/lib/merchant/server-store";
+import { hireFeedbackUri } from "@/app/lib/nest-routes";
 
 export async function GET(
   _req: Request,
@@ -12,7 +12,8 @@ export async function GET(
   if (!listing) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
-  const resource = `${apiV1("/agent/resource")}?seller=${encodeURIComponent(listing.agentId)}`;
+  const origin = new URL(_req.url).origin;
+  const resource = hireFeedbackUri(origin, listing.agentId);
   return NextResponse.json(
     merchantCardFromListing(listing, listing.a2a || resource),
   );

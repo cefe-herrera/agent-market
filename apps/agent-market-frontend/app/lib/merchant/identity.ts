@@ -62,16 +62,31 @@ export async function readAgentOwner(
   return getAddress(owner);
 }
 
+export async function readAgentUri(
+  tokenId: bigint,
+  chainId?: number,
+): Promise<string> {
+  const registry = identityRegistry(chainId);
+  return erc8183PublicClient(chainId).readContract({
+    address: registry,
+    abi: identityAbi,
+    functionName: "tokenURI",
+    args: [tokenId],
+  });
+}
+
 export async function registerIdentity(
   wallet: IdentityWallet,
   opts: {
     agentURI: string;
     account: Address;
     chainId?: number;
+    metadata?: { key: string; value: string }[];
   },
 ): Promise<{ tokenId: bigint; agentId: string; hash: Hash }> {
   const cfg = getErc8183(opts.chainId);
   const registry = identityRegistry(cfg.chainId);
+  const extra = opts.metadata ?? [];
   const hash = await wallet.writeContract({
     account: opts.account,
     chain: wallet.chain ?? cfg.chain,
@@ -83,7 +98,10 @@ export async function registerIdentity(
       [
         { metadataKey: "built_with", metadataValue: metaBytes("agent-market") },
         { metadataKey: "x402", metadataValue: metaBytes("true") },
-        { metadataKey: "erc8183", metadataValue: metaBytes("true") },
+        ...extra.map((item) => ({
+          metadataKey: item.key,
+          metadataValue: metaBytes(item.value),
+        })),
       ],
     ],
   });

@@ -12,10 +12,20 @@ import {
   verificationLabels,
 } from "@/app/lib/agents";
 import { demoMarketplaceAgents } from "@/app/lib/demo-agents";
-import { geminiMarketplaceAgents } from "@/app/lib/gemini/catalog";
+import {
+  geminiMarketplaceAgents,
+  isGeminiAgentId,
+  isGridAgentId,
+  isHealthAgentId,
+  isRebalanceAgentId,
+  isYieldAgentId,
+} from "@/app/lib/gemini/catalog";
 import { frontendBscChainId, frontendNetworkMode } from "@/app/lib/network";
-import { apiV1 } from "@/app/lib/api";
+import { marketplaceAgentsUrl, marketplaceAgentUrl } from "@/app/lib/nest-routes";
 import YieldAgentCard from "./YieldAgentCard";
+import RebalanceAgentCard from "./RebalanceAgentCard";
+import GridAgentCard from "./GridAgentCard";
+import HealthAgentCard from "./HealthAgentCard";
 import { loadLocalMerchants } from "@/app/lib/merchant/client-store";
 import { mergeCatalogWithMerchants } from "@/app/lib/merchant/to-catalog";
 import { X402_PAYMENT_USDC } from "@/app/lib/x402-usdc";
@@ -59,13 +69,17 @@ export default function AgentCatalog({
   const network = frontendNetworkMode();
   const isTestnet = network === "testnet";
   const chainId = frontendBscChainId(network);
-  const geminiAgents = geminiMarketplaceAgents();
+  const [geminiAgents, setGeminiAgents] = useState(() =>
+    geminiMarketplaceAgents(),
+  );
 
   async function fetchCatalog(expandOpen: boolean) {
     const res = await fetch(
-      `${apiV1("/marketplace/agents")}?isTestnet=${isTestnet}&chainId=${chainId}&usable=true${
-        expandOpen ? "&open=true" : ""
-      }`,
+      marketplaceAgentsUrl(
+        `?isTestnet=${isTestnet}&chainId=${chainId}&usable=true${
+          expandOpen ? "&open=true" : ""
+        }`,
+      ),
       { cache: "no-store" },
     );
     const payload = (await res.json().catch(() => null)) as
@@ -89,7 +103,7 @@ export default function AgentCatalog({
       throw new Error(
         nested
           ? String(nested)
-          : `API ${res.status} — Nest en ${process.env.NEXT_PUBLIC_API_URL || `http://${process.env.NEXT_PUBLIC_API_HOST || "127.0.0.1"}:${process.env.NEXT_PUBLIC_API_PORT || "3000"}`}`,
+          : `API ${res.status} — catálogo`,
       );
     }
     const list = Array.isArray(payload)
@@ -125,11 +139,16 @@ export default function AgentCatalog({
       try {
         const { listed, total, registered, filteredOut } = await fetchCatalog(false);
         if (!cancelled) {
-          const withMine = mergeCatalogWithMerchants(
-            listed,
-            loadLocalMerchants().filter((item) => item.chainId === chainId),
+          const merchants = loadLocalMerchants().filter(
+            (item) => item.chainId === chainId,
           );
-          setAgents(withMine);
+          const withMine = mergeCatalogWithMerchants(listed, merchants);
+          setGeminiAgents(
+            overlayGeminiFromCatalog(geminiMarketplaceAgents(), withMine),
+          );
+          setAgents(
+            withMine.filter((agent) => !isGeminiAgentId(agent.agentId)),
+          );
           setTotal(total);
           setRegistered(registered);
           setFilteredOut(filteredOut);
@@ -160,11 +179,14 @@ export default function AgentCatalog({
     try {
       const previousIds = new Set(agents.map((agent) => agent.agentId));
       const { listed, total, registered, filteredOut } = await fetchCatalog(true);
-      const withMine = mergeCatalogWithMerchants(
-        listed,
-        loadLocalMerchants().filter((item) => item.chainId === chainId),
+      const merchants = loadLocalMerchants().filter(
+        (item) => item.chainId === chainId,
       );
-      setAgents(withMine);
+      const withMine = mergeCatalogWithMerchants(listed, merchants);
+      setGeminiAgents(
+        overlayGeminiFromCatalog(geminiMarketplaceAgents(), withMine),
+      );
+      setAgents(withMine.filter((agent) => !isGeminiAgentId(agent.agentId)));
       setTotal(total);
       setRegistered(registered);
       setFilteredOut(filteredOut);
@@ -183,7 +205,7 @@ export default function AgentCatalog({
     setChecking(agent.agentId);
     try {
       const res = await fetch(
-        apiV1(`/marketplace/agents/${encodeURIComponent(agent.agentId)}/a2a-health`),
+        marketplaceAgentUrl(agent.agentId, "/a2a-health"),
         { cache: "no-store" },
       );
       const json = (await res.json()) as A2aHealth;
@@ -212,7 +234,7 @@ export default function AgentCatalog({
     setLoadingEndpoint(agent.agentId);
     try {
       const res = await fetch(
-        apiV1(`/marketplace/agents/${encodeURIComponent(agent.agentId)}`),
+        marketplaceAgentUrl(agent.agentId),
         { cache: "no-store" },
       );
       const json = (await res.json()) as MarketplaceAgent;
@@ -246,6 +268,28 @@ export default function AgentCatalog({
       </div>
 
       <h2 className="mt-8 font-mono-data text-xs uppercase tracking-wider text-brand-500">
+        Rebalancing
+      </h2>
+      <p className="mt-2 max-w-2xl font-mono-data text-sm text-surface-500">
+        Snapshot CoinGecko: spot USD, 24h drift, banda high/low para un sleeve
+        50/50 BNB–USDT. Hire x402; el batch 7579 queda como trigger, no
+        recentra LPs.
+      </p>
+      <ul className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
+        {geminiAgents
+          .filter((agent) => isRebalanceAgentId(agent.agentId))
+          .map((agent) => (
+            <li key={agent.agentId} className="min-w-0 max-w-full">
+              <RebalanceAgentCard
+                agent={agent}
+                selected={selectedId === agent.agentId}
+                onSelect={onSelect}
+              />
+            </li>
+          ))}
+      </ul>
+
+      <h2 className="mt-8 font-mono-data text-xs uppercase tracking-wider text-brand-500">
         Yield Optimisation
       </h2>
       <p className="mt-2 max-w-2xl font-mono-data text-sm text-surface-500">
@@ -254,15 +298,61 @@ export default function AgentCatalog({
         7579 queda como trigger, no ejecuta fondos.
       </p>
       <ul className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
-        {geminiAgents.map((agent) => (
-          <li key={agent.agentId} className="min-w-0 max-w-full">
-            <YieldAgentCard
-              agent={agent}
-              selected={selectedId === agent.agentId}
-              onSelect={onSelect}
-            />
-          </li>
-        ))}
+        {geminiAgents
+          .filter((agent) => isYieldAgentId(agent.agentId))
+          .map((agent) => (
+            <li key={agent.agentId} className="min-w-0 max-w-full">
+              <YieldAgentCard
+                agent={agent}
+                selected={selectedId === agent.agentId}
+                onSelect={onSelect}
+              />
+            </li>
+          ))}
+      </ul>
+
+      <h2 className="mt-8 font-mono-data text-xs uppercase tracking-wider text-brand-500">
+        Grid Trading
+      </h2>
+      <p className="mt-2 max-w-2xl font-mono-data text-sm text-surface-500">
+        Snapshot Aster DEX: mark, funding 8h, rango 24h. Bandas CoinGecko
+        high/low para un grid BNB/USDT. Hire x402; el batch 7579 queda como
+        trigger, no coloca órdenes de perps.
+      </p>
+      <ul className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
+        {geminiAgents
+          .filter((agent) => isGridAgentId(agent.agentId))
+          .map((agent) => (
+            <li key={agent.agentId} className="min-w-0 max-w-full">
+              <GridAgentCard
+                agent={agent}
+                selected={selectedId === agent.agentId}
+                onSelect={onSelect}
+              />
+            </li>
+          ))}
+      </ul>
+
+      <h2 className="mt-8 font-mono-data text-xs uppercase tracking-wider text-brand-500">
+        Health Factor
+      </h2>
+      <p className="mt-2 max-w-2xl font-mono-data text-sm text-surface-500">
+        Snapshot Venus: collateral factor y borrow APY. Precio BNB de CoinGecko
+        para un sleeve simulado BNB/USDT. Hire x402; el batch 7579 queda como
+        trigger, no hace repay.
+      </p>
+      <ul className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
+        {geminiAgents
+          .filter((agent) => isHealthAgentId(agent.agentId))
+          .map((agent) => (
+            <li key={agent.agentId} className="min-w-0 max-w-full">
+              <HealthAgentCard
+                agent={agent}
+                selected={selectedId === agent.agentId}
+                onSelect={onSelect}
+              />
+            </li>
+          ))}
       </ul>
 
       {isTestnet && (
@@ -352,6 +442,24 @@ export default function AgentCatalog({
       />
     </section>
   );
+}
+
+function overlayGeminiFromCatalog(
+  gemini: MarketplaceAgent[],
+  catalog: MarketplaceAgent[],
+): MarketplaceAgent[] {
+  return gemini.map((agent) => {
+    const hit = catalog.find((item) => item.agentId === agent.agentId);
+    if (!hit) return agent;
+    return {
+      ...agent,
+      verified: hit.verified || agent.verified,
+      agentWallet: hit.agentWallet,
+      ownerWallet: hit.ownerWallet,
+      erc8183Provider: hit.erc8183Provider ?? agent.erc8183Provider,
+      a2a: hit.a2a ?? agent.a2a,
+    };
+  });
 }
 
 function AgentList({
@@ -461,6 +569,16 @@ function AgentList({
               <p className="font-mono-data text-[11px] text-surface-500">
                 {shortenAddress(agent.agentWallet)}
               </p>
+              {probe && (
+                <p
+                  className={`mt-2 font-mono-data text-[11px] ${
+                    probe.healthy ? "text-brand-500" : "text-red-400"
+                  }`}
+                >
+                  A2A {probe.status}
+                  {probe.error ? ` · ${probe.error}` : ""}
+                </p>
+              )}
             </button>
             <div className="mt-2 min-w-0 space-y-1 px-1">
               <EndpointLink label="MCP" href={endpoints.mcp} />

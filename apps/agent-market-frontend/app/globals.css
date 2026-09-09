@@ -296,7 +296,7 @@
   }
 
   .nav-link {
-    @apply font-mono-data text-sm text-surface-500 no-underline transition hover:text-surface-950;
+    @apply whitespace-nowrap font-mono-data text-sm text-surface-500 no-underline transition hover:text-surface-950;
   }
 
   .nav-link-active {
@@ -309,5 +309,107 @@
 
   .text-negative {
     @apply text-red-400;
+  }
+
+  .hire-panel {
+    @apply flex flex-col gap-4;
+  }
+
+  .hire-identity {
+    @apply flex items-start gap-3 border border-surface-300 bg-surface-50 px-3 py-3;
+  }
+
+  .hire-identity-mark {
+    @apply flex h-9 w-9 shrink-0 items-center justify-center bg-brand-500 font-pixel-square text-sm text-surface-50;
+  }
+
+  .hire-kv {
+    @apply divide-y divide-surface-300 rounded-none border border-surface-300 bg-surface-50;
+  }
+
+  .hire-kv-row {
+    @apply flex items-center justify-between gap-3 px-3 py-2.5 font-mono-data text-xs;
+  }
+
+  .hire-kv-label {
+    @apply shrink-0 text-surface-500;
+  }
+
+  .hire-kv-value {
+    @apply min-w-0 truncate text-right text-surface-800;
+  }
+
+  .hire-copy {
+    @apply shrink-0 font-mono-data text-[10px] uppercase tracking-wider text-surface-500 hover:text-brand-500;
+  }
+
+  .hire-section-label {
+    @apply font-mono-data text-[10px] uppercase tracking-wider text-surface-500;
+  }
+
+  .hire-warn {
+    @apply flex gap-2 border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 font-mono-data text-[11px] leading-5 text-amber-400;
+  }
+
+  .hire-fold {
+    @apply border border-surface-300 bg-surface-50;
+  }
+
+  .hire-fold > summary {
+    @apply cursor-pointer list-none px-3 py-2.5 font-mono-data text-[11px] uppercase tracking-wider text-surface-500;
+  }
+
+  .hire-fold > summary::after {
+    content: "▾";
+    float: right;
+    color: inherit;
+  }
+
+  .hire-fold > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .hire-fold[open] > summary {
+    @apply border-b border-surface-300 text-brand-500;
+  }
+
+  .hire-fold[open] > summary::after {
+    content: "▴";
+  }
+
+  .hire-fold-body {
+    @apply p-3;
+  }
+
+  .hire-shield {
+    @apply flex items-center gap-2 font-mono-data text-[10px] leading-4 text-surface-500;
+  }
+
+  .hire-dock-backdrop {
+    @apply fixed inset-0 z-[59] bg-black/55 sm:bg-black/20;
+  }
+
+  .hire-dock {
+    @apply fixed z-[60];
+  }
+
+  .hire-dock-min {
+    @apply inset-x-3 bottom-3 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-[24rem];
+  }
+
+  .hire-dock-open {
+    @apply inset-x-0 bottom-0 w-full sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[24rem];
+  }
+
+  .hire-dock-panel {
+    @apply max-h-[min(88dvh,42rem)] overflow-y-auto rounded-t-2xl border-x-0 border-b-0 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-16px_48px_rgba(0,0,0,0.55)] sm:rounded-none sm:border sm:border-brand-500/35 sm:pb-4 sm:shadow-[0_16px_48px_rgba(0,0,0,0.45)];
+  }
+
+  .hire-dock-chip {
+    @apply flex w-full items-center gap-3 border border-brand-500/40 bg-surface-50 px-3 py-3 text-left shadow-[0_12px_32px_rgba(0,0,0,0.45)];
+  }
+
+  .hire-dock-close {
+    @apply font-mono-data text-[10px] uppercase tracking-wider text-surface-500 hover:text-brand-500;
   }
 }

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { zeroHash } from "viem";
 import { useReadContract, useWriteContract } from "wagmi";
 import { useWalletReady } from "@/app/context/hooks/useWalletReady";
-import { apiV1 } from "@/app/lib/api";
 import {
   BSC_TESTNET_CHAIN_ID,
   IDENTITY_REGISTRY,
@@ -14,6 +13,7 @@ import {
   isSameAddress,
   parseTokenId,
 } from "@/app/lib/erc8004";
+import { hireFeedbackUri } from "@/app/lib/nest-routes";
 
 export default function FeedbackButton({
   enabled,
@@ -60,7 +60,7 @@ export default function FeedbackButton({
           0,
           "x402",
           "quality",
-          `${apiV1("/agent/resource")}?seller=${encodeURIComponent(agentId)}`,
+          hireFeedbackUri(window.location.origin, agentId),
           "",
           zeroHash,
         ],

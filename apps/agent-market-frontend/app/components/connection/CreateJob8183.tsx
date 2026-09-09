@@ -12,6 +12,7 @@ import { loadStoredJobs, rememberJob } from "@/app/lib/erc8183/jobs-store";
 import { readJob } from "@/app/lib/erc8183/read";
 import { JOB_STATUS_LABEL, JobStatus, type Job } from "@/app/lib/erc8183/types";
 import { local8183Provider } from "@/app/lib/merchant/client-store";
+import { shortenAddress } from "@/app/lib/agents";
 import {
   buildJobDescription,
   claimRefund,
@@ -19,8 +20,9 @@ import {
   settle,
   type Erc8183Wallet,
 } from "@/app/lib/erc8183/write";
-import { apiV1 } from "@/app/lib/api";
-import { isGeminiAgentId } from "@/app/lib/gemini/ids";
+import { geminiAgentKind } from "@/app/lib/gemini/ids";
+import { marketplaceAgentUrl } from "@/app/lib/nest-routes";
+import { merchantApiPath } from "@/app/lib/env-routes";
 
 const STEPS = ["checking", "bundling", "creating", "funding", "done"] as const;
 
@@ -36,11 +38,13 @@ export default function CreateJob8183({
   selectedName,
   selectedAgentId,
   selected8183Provider,
+  compact = false,
 }: {
   selectedPayTo?: string | null;
   selectedName?: string | null;
   selectedAgentId?: string | null;
   selected8183Provider?: string | null;
+  compact?: boolean;
 }) {
   const { account, walletClient, isConnected, chainId } = useWalletReady();
   const buyer = useBuyerSafe();
@@ -57,7 +61,26 @@ export default function CreateJob8183({
   const [provider, setProvider] = useState<`0x${string}` | null>(null);
 
   useEffect(() => {
-    if (isGeminiAgentId(selectedAgentId)) {
+    const kind = geminiAgentKind(selectedAgentId);
+    if (kind === "health") {
+      setDescription((prev) =>
+        prev === "marketplace hire"
+          ? "Monitor Venus BNB/USDT health factor using CoinGecko collateral price (advisory, do not execute)."
+          : prev,
+      );
+    } else if (kind === "grid") {
+      setDescription((prev) =>
+        prev === "marketplace hire"
+          ? "Keep a BNB/USDT grid on Aster using live mark/funding and CoinGecko 24h bands (advisory, do not execute)."
+          : prev,
+      );
+    } else if (kind === "rebalance") {
+      setDescription((prev) =>
+        prev === "marketplace hire"
+          ? "Keep a 50/50 BNB–USDT sleeve in range using CoinGecko prices (advisory, do not execute)."
+          : prev,
+      );
+    } else if (kind === "yield") {
       setDescription((prev) =>
         prev === "marketplace hire"
           ? "Route idle $U to the highest available APR on BSC (advisory, do not execute)."
@@ -84,13 +107,11 @@ export default function CreateJob8183({
       }
       try {
         const [listingRes, cardRes] = await Promise.all([
-          fetch(`/api/merchant?id=${encodeURIComponent(selectedAgentId)}`, {
+          fetch(merchantApiPath(`?id=${encodeURIComponent(selectedAgentId)}`), {
             cache: "no-store",
           }),
           fetch(
-            apiV1(
-              `/marketplace/agents/${encodeURIComponent(selectedAgentId)}/card`,
-            ),
+            marketplaceAgentUrl(selectedAgentId, "/card"),
             { cache: "no-store" },
           ),
         ]);
@@ -244,45 +265,28 @@ export default function CreateJob8183({
   const stepIndex = STEPS.indexOf(step === "idle" ? "checking" : step);
 
   return (
-    <div className="mt-8 border-t border-surface-300 pt-6">
-      <p className="label-terminal">ERC-8183 · escrow</p>
-      <h2 className="mt-2 font-pixel-square text-lg text-surface-950">
-        Crear job 8183
-      </h2>
-      <p className="mt-2 font-mono-data text-sm leading-6 text-surface-500">
-        Otro riel: un UserOp desde tu Buyer Safe 7579. x402 sigue siendo el hit
-        HTTP de la EOA. El <code>provider</code> es el Agent Safe, no el
-        agentWallet 8004.
+    <div className={compact ? "space-y-3" : "mt-8 border-t border-surface-300 pt-6"}>
+      {!compact && (
+        <>
+          <p className="label-terminal">ERC-8183 · escrow</p>
+          <h2 className="mt-2 font-pixel-square text-lg text-surface-950">
+            Crear job 8183
+          </h2>
+        </>
+      )}
+      <p className="font-mono-data text-[11px] leading-5 text-surface-500">
+        Riel aparte del x402: UserOp desde tu Buyer Safe. El provider es el
+        Agent Safe, no el payTo.
       </p>
 
-      <dl className="mt-4 grid gap-2 font-mono-data text-xs">
-        <Row label="commerce" value={cfg.commerce} />
-        <Row
-          label="buyer safe"
-          value={
-            buyer.safe
-              ? `${buyer.safe}${buyer.deployed ? "" : " · counterfactual"}`
-              : "conectá la wallet"
-          }
-        />
-        <Row label="safe BNB" value={buyer.bnbLabel} warn={buyer.bnb === BigInt(0)} />
-        <Row
-          label="safe $U"
-          value={buyer.uLabel}
-          warn={buyer.uBalance === BigInt(0)}
-        />
-        <Row
-          label="provider (agent SA)"
-          value={
-            provider
-              ? `${provider}${selectedName ? ` · ${selectedName}` : ""}`
-              : "este listing no publicó Agent Safe 7579"
-          }
+      <dl className="hire-kv">
+        <Kv label="Buyer Safe" value={buyer.safe ? shortenAddress(buyer.safe) : "—"} />
+        <Kv label="Safe BNB" value={buyer.bnbLabel} warn={buyer.bnb === BigInt(0)} />
+        <Kv label="Safe $U" value={buyer.uLabel} warn={buyer.uBalance === BigInt(0)} />
+        <Kv
+          label="Provider"
+          value={provider ? shortenAddress(provider) : "sin Agent Safe"}
           warn={!provider}
-        />
-        <Row
-          label="chain"
-          value={`${cfg.chainId} (${cfg.isMainnet ? "bsc mainnet" : "bsc testnet"})`}
         />
       </dl>
 
@@ -500,7 +504,7 @@ export default function CreateJob8183({
   );
 }
 
-function Row({
+function Kv({
   label,
   value,
   warn = false,
@@ -510,12 +514,11 @@ function Row({
   warn?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-1 border border-surface-300 px-3 py-2">
-      <dt className="text-[10px] uppercase tracking-wider text-surface-500">
-        {label}
-      </dt>
+    <div className="hire-kv-row">
+      <dt className="hire-kv-label">{label}</dt>
       <dd
-        className={`break-all ${warn ? "text-amber-400" : "text-surface-800"}`}
+        className={`hire-kv-value ${warn ? "text-amber-400" : ""}`}
+        title={value}
       >
         {value}
       </dd>

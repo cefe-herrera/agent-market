@@ -8,6 +8,7 @@ import {
   type Hash,
   type Hex,
   type TransactionReceipt,
+  type Transport,
   type WalletClient,
 } from "viem";
 import { COMMERCE_ABI, ERC20_ABI, POLICY_ABI, ROUTER_ABI } from "./abis";
@@ -30,7 +31,11 @@ import type { CreateAndFundStep, JobWriteResult } from "./types";
 
 const EMPTY_BYTES = "0x" as Hex;
 
-export type Erc8183Wallet = WalletClient<Chain | undefined, Account | undefined>;
+export type Erc8183Wallet = WalletClient<
+  Transport,
+  Chain | undefined,
+  Account | undefined
+>;
 
 export function parseJobCreatedId(
   logs: TransactionReceipt["logs"],

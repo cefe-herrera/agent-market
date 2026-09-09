@@ -1,5 +1,4 @@
 import { getAddress, toHex, type Address, type Hex, type WalletClient } from "viem";
-import { apiV1 } from "@/app/lib/api";
 import {
   USDC_EIP712,
   X402_AMOUNT_ATOMIC,
@@ -7,6 +6,7 @@ import {
   x402PaymentConfig,
   usdcExactRequirements,
 } from "@/app/lib/x402-usdc";
+import { x402SettleUrl } from "@/app/lib/nest-routes";
 
 const eip3009Types = {
   TransferWithAuthorization: [
@@ -83,7 +83,7 @@ export async function signExactUsdcPayment(
     },
     resource: {
       url: typeof window !== "undefined" ? `${window.location.origin}/` : "/",
-      description: "BNB Agent Market x402 $U exact payment",
+      description: "4Agents x402 $U exact payment",
       mimeType: "application/json",
     },
   };
@@ -107,7 +107,7 @@ export type X402SettleResult = {
 export async function settleExactUsdcPayment(
   body: Awaited<ReturnType<typeof signExactUsdcPayment>>,
 ): Promise<X402SettleResult> {
-  const res = await fetch(apiV1("/x402/settle"), {
+  const res = await fetch(x402SettleUrl(), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

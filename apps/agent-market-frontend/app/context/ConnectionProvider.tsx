@@ -39,7 +39,7 @@ const walletConnectProjectId =
 const payment = x402PaymentConfig();
 
 const config = getDefaultConfig({
-  appName: "BNB Agent Market",
+  appName: "4Agents",
   projectId: walletConnectProjectId,
   chains: [payment.chain],
   transports: {

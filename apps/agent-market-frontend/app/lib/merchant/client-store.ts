@@ -1,5 +1,6 @@
 import type { Address } from "viem";
-import type { LocalMerchant, PublicMerchant } from "./types";
+import { merchantMatchesId, type LocalMerchant, type PublicMerchant } from "./types";
+import { merchantApiPath } from "@/app/lib/env-routes";
 
 const KEY = "merchant.listings.v1";
 
@@ -20,7 +21,9 @@ export function rememberLocalMerchant(listing: LocalMerchant): void {
   const next = [
     listing,
     ...loadLocalMerchants().filter(
-      (item) => item.agentId !== listing.agentId,
+      (item) =>
+        item.agentId !== listing.agentId &&
+        !(listing.catalogId && item.catalogId === listing.catalogId),
     ),
   ].slice(0, 30);
   window.localStorage.setItem(KEY, JSON.stringify(next));
@@ -30,12 +33,9 @@ export function localMerchantForAgent(
   agentId: string | null | undefined,
 ): LocalMerchant | null {
   if (!agentId) return null;
-  const needle = agentId.toLowerCase();
   return (
-    loadLocalMerchants().find(
-      (item) =>
-        item.agentId.toLowerCase() === needle || item.tokenId === agentId,
-    ) ?? null
+    loadLocalMerchants().find((item) => merchantMatchesId(item, agentId)) ??
+    null
   );
 }
 
@@ -49,7 +49,7 @@ export function local8183Provider(
 export async function publishMerchant(
   listing: PublicMerchant,
 ): Promise<void> {
-  await fetch("/api/merchant", {
+  await fetch(merchantApiPath(), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(listing),
