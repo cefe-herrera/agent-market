@@ -22,6 +22,7 @@ export default function Navbar() {
   const { t } = useI18n();
   const pathname = usePathname();
   const onMyAgents = pathname === "/my-agents";
+  const onSell = pathname === "/sell";
 
   return (
     <header className="sticky top-0 z-50 border-b border-surface-300 bg-surface-50/90 backdrop-blur-md">
@@ -47,6 +48,12 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
           <ConnectWallet />
+          <Link
+            href="/sell"
+            className={`btn-secondary !px-3 !py-1.5 text-xs ${onSell ? "bg-brand-400/20" : ""}`}
+          >
+            {t("nav.sell")}
+          </Link>
           <Link
             href="/my-agents"
             className={`btn-primary !px-3 !py-1.5 text-xs ${onMyAgents ? "bg-brand-400" : ""}`}

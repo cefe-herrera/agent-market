@@ -46,6 +46,8 @@ export type MarketplaceAgent = {
     skills: string[];
     studioSdk?: boolean;
   };
+  /** Agent Safe 7579 used as ERC-8183 `provider`. Not the x402 payTo. */
+  erc8183Provider?: string | null;
 };
 
 export const BSC_TESTNET_CHAIN_ID = 97;

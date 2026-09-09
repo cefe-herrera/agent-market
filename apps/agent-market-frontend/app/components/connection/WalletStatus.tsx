@@ -19,10 +19,12 @@ export default function WalletStatus({
   selectedPayTo,
   selectedName,
   selectedAgentId,
+  selected8183Provider,
 }: {
   selectedPayTo?: string | null;
   selectedName?: string | null;
   selectedAgentId?: string | null;
+  selected8183Provider?: string | null;
 }) {
   const { account, isConnected, chainId } = useWalletReady();
   const onPaymentChain = chainId === X402_CHAIN_ID;
@@ -81,6 +83,7 @@ export default function WalletStatus({
           selectedPayTo={selectedPayTo}
           selectedName={selectedName}
           selectedAgentId={selectedAgentId}
+          selected8183Provider={selected8183Provider}
         />
     </div>
   );

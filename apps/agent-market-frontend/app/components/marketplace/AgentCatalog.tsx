@@ -12,8 +12,12 @@ import {
   verificationLabels,
 } from "@/app/lib/agents";
 import { demoMarketplaceAgents } from "@/app/lib/demo-agents";
+import { geminiMarketplaceAgents } from "@/app/lib/gemini/catalog";
 import { frontendBscChainId, frontendNetworkMode } from "@/app/lib/network";
 import { apiV1 } from "@/app/lib/api";
+import YieldAgentCard from "./YieldAgentCard";
+import { loadLocalMerchants } from "@/app/lib/merchant/client-store";
+import { mergeCatalogWithMerchants } from "@/app/lib/merchant/to-catalog";
 import { X402_PAYMENT_USDC } from "@/app/lib/x402-usdc";
 import type { HeroStats } from "@/app/components/home/Hero";
 
@@ -55,6 +59,7 @@ export default function AgentCatalog({
   const network = frontendNetworkMode();
   const isTestnet = network === "testnet";
   const chainId = frontendBscChainId(network);
+  const geminiAgents = geminiMarketplaceAgents();
 
   async function fetchCatalog(expandOpen: boolean) {
     const res = await fetch(
@@ -120,15 +125,19 @@ export default function AgentCatalog({
       try {
         const { listed, total, registered, filteredOut } = await fetchCatalog(false);
         if (!cancelled) {
-          setAgents(listed);
+          const withMine = mergeCatalogWithMerchants(
+            listed,
+            loadLocalMerchants().filter((item) => item.chainId === chainId),
+          );
+          setAgents(withMine);
           setTotal(total);
           setRegistered(registered);
           setFilteredOut(filteredOut);
           onStats?.({
-            agents: listed.length,
+            agents: withMine.length,
             categories: 4,
             chains: 1,
-            verified: listed.filter((agent) => agent.verified).length,
+            verified: withMine.filter((agent) => agent.verified).length,
           });
         }
       } catch (err) {
@@ -151,7 +160,11 @@ export default function AgentCatalog({
     try {
       const previousIds = new Set(agents.map((agent) => agent.agentId));
       const { listed, total, registered, filteredOut } = await fetchCatalog(true);
-      setAgents(listed);
+      const withMine = mergeCatalogWithMerchants(
+        listed,
+        loadLocalMerchants().filter((item) => item.chainId === chainId),
+      );
+      setAgents(withMine);
       setTotal(total);
       setRegistered(registered);
       setFilteredOut(filteredOut);
@@ -231,6 +244,26 @@ export default function AgentCatalog({
           </p>
         </div>
       </div>
+
+      <h2 className="mt-8 font-mono-data text-xs uppercase tracking-wider text-brand-500">
+        Yield Optimisation
+      </h2>
+      <p className="mt-2 max-w-2xl font-mono-data text-sm text-surface-500">
+        Snapshot live: Venus supply APY, PancakeSwap V3 fee APR (volumen
+        GeckoTerminal), Lista slisBNB simulado 7–11%. Hire x402; el batch
+        7579 queda como trigger, no ejecuta fondos.
+      </p>
+      <ul className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
+        {geminiAgents.map((agent) => (
+          <li key={agent.agentId} className="min-w-0 max-w-full">
+            <YieldAgentCard
+              agent={agent}
+              selected={selectedId === agent.agentId}
+              onSelect={onSelect}
+            />
+          </li>
+        ))}
+      </ul>
 
       {isTestnet && (
         <>
@@ -348,14 +381,14 @@ function AgentList({
     <ul className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
       {agents.map((agent) => {
         const selected = selectedId === agent.agentId;
-        const live = health[agent.agentId];
+        const probe = health[agent.agentId];
         const x402 = agent.supportedAssets.includes("U");
         const placeholder = !demo && isPlaceholderEndpoint(agent);
         const hasMcp = agentHasMcp(agent);
         const endpoints = endpointView[agent.agentId] ?? agentEndpoints(agent);
         const shownUrl = endpoints.a2a ?? endpoints.mcp;
         const usagePrice =
-          live?.priceLabel ??
+          probe?.priceLabel ??
           agent.verification?.priceLabel ??
           agent.a2a?.priceLabel ??
           (x402 ? `${X402_PAYMENT_USDC} $U hire` : null);
@@ -416,6 +449,9 @@ function AgentList({
                   </span>
                 )}
                 {x402 && <span className="badge-green">x402 $U</span>}
+                {agent.erc8183Provider && (
+                  <span className="badge-green">8183</span>
+                )}
                 {usagePrice && <span className="badge-gray">{usagePrice}</span>}
                 {demo && <span className="badge-gray">JSON fijo</span>}
                 {placeholder && (

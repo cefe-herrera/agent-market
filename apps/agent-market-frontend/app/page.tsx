@@ -51,6 +51,7 @@ export default function Home() {
                 selectedPayTo={selected?.agentWallet}
                 selectedName={selected?.name}
                 selectedAgentId={selected?.agentId}
+                selected8183Provider={selected?.erc8183Provider}
               />
             </aside>
           </div>

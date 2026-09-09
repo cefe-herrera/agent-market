@@ -8,12 +8,15 @@
     "dev:testnet": "cross-env NEXT_PUBLIC_NETWORK=testnet NETWORK=testnet next dev -p 3001",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "agent:submit": "npx tsx scripts/agent-submit-worker.ts"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.2.9",
+    "@rhinestone/module-sdk": "^0.4.0",
     "@tanstack/react-query": "^5.90.6",
     "next": "16.3.1",
+    "permissionless": "^0.4.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "viem": "^2.38.6",
@@ -24,10 +27,10 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "cross-env": "^7.0.3"
+    "typescript": "^5"
   }
 }

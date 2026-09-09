@@ -9,6 +9,7 @@ Fuentes:
 - SDK: `../bnbagent-sdk/typescript/src/networks/addresses.ts`
 - ABIs: `../bnbagent-sdk/abis/` y `../bnbagent-sdk/typescript/src/abis/`
 - Safe 7579: `../safe7579`
+- Siguiente: `TODO-SAFE7579-PIMLICO.md` — Pimlico bundler, batch 8183, session key del agente
 
 Stack que ya existe y no se toca como riel de pago HTTP:
 

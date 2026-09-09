@@ -45,6 +45,7 @@ export type JobWriteResult = {
 
 export type CreateAndFundStep =
   | "checking"
+  | "bundling"
   | "creating"
   | "registering"
   | "budget"
