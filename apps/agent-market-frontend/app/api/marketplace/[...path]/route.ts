@@ -9,6 +9,15 @@ import {
   resolveIndexerAgent,
 } from "@/app/lib/indexer-bnb";
 import { fetchAgentCardPreview } from "@/app/lib/agent-card";
+import {
+  getPublicMerchant,
+  listPublicMerchants,
+} from "@/app/lib/merchant/server-store";
+import { merchantCardFromListing } from "@/app/lib/merchant/card";
+import {
+  merchantToCatalogAgent,
+  mergeCatalogWithMerchants,
+} from "@/app/lib/merchant/to-catalog";
 
 export const maxDuration = 120;
 
@@ -40,7 +49,11 @@ async function handle(path: string[], search: string): Promise<Response> {
 
   if (path.length === 1 && path[0] === "agents") {
     const result = await listIndexerAgents(filters);
-    return Response.json(result);
+    const merged = mergeCatalogWithMerchants(
+      result.data,
+      listPublicMerchants().filter((item) => item.chainId === filters.chainId),
+    );
+    return Response.json({ ...result, data: merged, total: merged.length });
   }
 
   if (path.length === 1 && path[0] === "featured") {
@@ -76,6 +89,25 @@ async function handle(path: string[], search: string): Promise<Response> {
   if (path[0] === "agents" && path[1]) {
     const id = path[1];
     if (path[2] === "card") {
+      const merchant = getPublicMerchant(id);
+      if (merchant) {
+        const card = merchantCardFromListing(merchant, merchant.a2a);
+        return Response.json({
+          sourceUrl: merchant.cardUrl ?? `merchant:${merchant.agentId}`,
+          name: merchant.name,
+          description: merchant.description,
+          endpoint: merchant.a2a,
+          provider: merchant.owner,
+          documentationUrl: null,
+          x402: true,
+          erc8183Provider: merchant.provider8183,
+          protocolVersion: "0.3.0",
+          preferredTransport: null,
+          skills: [{ id: "hire", name: "Marketplace hire", description: merchant.description, tags: ["x402", "erc-8183"] }],
+          interfaces: [],
+          card,
+        });
+      }
       const card = await fetchAgentCardPreview(id);
       if (!card) {
         return Response.json(
@@ -97,6 +129,8 @@ async function handle(path: string[], search: string): Promise<Response> {
       return Response.json(reputation);
     }
     if (!path[2]) {
+      const merchant = getPublicMerchant(id);
+      if (merchant) return Response.json(merchantToCatalogAgent(merchant));
       const agent = await resolveIndexerAgent(id);
       if (!agent) return Response.json({ error: "Agent not found" }, { status: 404 });
       return Response.json(agent);

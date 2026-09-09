@@ -83,6 +83,13 @@ export const COMMERCE_ABI = [
   },
   {
     type: "function",
+    name: "jobCounter",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
     name: "getJob",
     stateMutability: "view",
     inputs: [{ name: "jobId", type: "uint256" }],
@@ -186,6 +193,16 @@ export const ERC20_ABI = [
     stateMutability: "nonpayable",
     inputs: [
       { name: "spender", type: "address" },
+      { name: "value", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "transfer",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
       { name: "value", type: "uint256" },
     ],
     outputs: [{ name: "", type: "bool" }],

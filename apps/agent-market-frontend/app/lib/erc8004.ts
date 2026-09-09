@@ -1,13 +1,28 @@
 import { getAddress, type Address } from "viem";
+import { frontendBscChainId } from "@/app/lib/network";
 
 export const BSC_TESTNET_CHAIN_ID = 97;
 
+/** BSC testnet Identity Registry (feedback + legacy helpers). */
 export const IDENTITY_REGISTRY = getAddress(
   "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+);
+export const IDENTITY_REGISTRY_MAINNET = getAddress(
+  "0x8004a169fb4a3325136eb29fa0ceb6d2e539a432",
 );
 export const REPUTATION_REGISTRY = getAddress(
   "0x8004B663056A597Dffe9eCcC1965A193B7388713",
 );
+
+export function identityRegistry(chainId?: number): Address {
+  const id = chainId ?? frontendBscChainId();
+  return id === 56 ? IDENTITY_REGISTRY_MAINNET : IDENTITY_REGISTRY;
+}
+
+export function agentCaip(tokenId: number, chainId?: number): string {
+  const id = chainId ?? frontendBscChainId();
+  return `${id}:${identityRegistry(id).toLowerCase()}:${tokenId}`;
+}
 
 export const reputationAbi = [
   {
@@ -70,11 +85,50 @@ export const identityAbi = [
     inputs: [{ name: "tokenId", type: "uint256" }],
     outputs: [{ type: "address" }],
   },
+  {
+    type: "function",
+    name: "tokenURI",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ type: "string" }],
+  },
+  {
+    type: "function",
+    name: "register",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "agentURI", type: "string" },
+      {
+        name: "metadata",
+        type: "tuple[]",
+        components: [
+          { name: "metadataKey", type: "string" },
+          { name: "metadataValue", type: "bytes" },
+        ],
+      },
+    ],
+    outputs: [{ name: "agentId", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "setAgentURI",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "agentId", type: "uint256" },
+      { name: "newURI", type: "string" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "event",
+    name: "Registered",
+    inputs: [
+      { name: "agentId", type: "uint256", indexed: true },
+      { name: "agentURI", type: "string", indexed: false },
+      { name: "owner", type: "address", indexed: true },
+    ],
+  },
 ] as const;
-
-export function agentCaip(tokenId: number): string {
-  return `${BSC_TESTNET_CHAIN_ID}:${IDENTITY_REGISTRY.toLowerCase()}:${tokenId}`;
-}
 
 export function parseTokenId(agentId: string | null | undefined): number {
   if (!agentId) return 0;

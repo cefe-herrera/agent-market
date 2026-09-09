@@ -3,7 +3,10 @@ import type { Address, Hex } from "viem";
 export type StoredErc8183Job = {
   jobId: string;
   chainId: number;
+  /** On-chain `client` — Buyer Safe after the 7579 batch. */
   client: Address;
+  /** Connected EOA that owns the Buyer Safe. Used as localStorage key. */
+  ownerEoa?: Address;
   provider: Address;
   createdAt: number;
   agentId?: string | null;
@@ -36,12 +39,17 @@ export function loadStoredJobs(
 
 export function rememberJob(job: StoredErc8183Job): void {
   if (typeof window === "undefined") return;
-  const current = loadStoredJobs(job.chainId, job.client).filter(
-    (item) => item.jobId !== job.jobId,
+  const viewers = new Set(
+    [job.ownerEoa, job.client].filter(Boolean).map((addr) => addr!.toLowerCase()),
   );
-  current.unshift(job);
-  window.localStorage.setItem(
-    storageKey(job.chainId, job.client),
-    JSON.stringify(current.slice(0, 20)),
-  );
+  for (const viewer of viewers) {
+    const current = loadStoredJobs(job.chainId, viewer).filter(
+      (item) => item.jobId !== job.jobId,
+    );
+    current.unshift(job);
+    window.localStorage.setItem(
+      storageKey(job.chainId, viewer),
+      JSON.stringify(current.slice(0, 20)),
+    );
+  }
 }

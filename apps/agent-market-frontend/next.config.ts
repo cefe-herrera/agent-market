@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  transpilePackages: ["permissionless", "@rhinestone/module-sdk"],
 };
 
 export default nextConfig;

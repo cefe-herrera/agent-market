@@ -16,6 +16,7 @@ export type AgentCardPreview = {
   provider: string | null;
   documentationUrl: string | null;
   x402: boolean;
+  erc8183Provider: string | null;
   protocolVersion: string | null;
   preferredTransport: string | null;
   skills: AgentCardSkill[];
@@ -95,6 +96,7 @@ function toPreview(
       capabilities?.x402 === true ||
       card.x402 === true ||
       card.x402Support === true,
+    erc8183Provider: parseErc8183Provider(card),
     protocolVersion: stringField(card.protocolVersion) ?? stringField(card.version),
     preferredTransport: stringField(card.preferredTransport),
     skills: parseSkills(card.skills),
@@ -148,6 +150,15 @@ function parseInterfaces(
 
 function stringField(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function parseErc8183Provider(card: Record<string, unknown>): string | null {
+  const block =
+    card.erc8183 && typeof card.erc8183 === "object"
+      ? (card.erc8183 as Record<string, unknown>)
+      : null;
+  const raw = stringField(block?.provider) ?? stringField(card.erc8183Provider);
+  return raw;
 }
 
 async function getJson(url: string): Promise<Record<string, unknown> | null> {

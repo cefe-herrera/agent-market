@@ -29,6 +29,21 @@ export function erc8183PublicClient(chainId?: number): PublicClient {
   return client;
 }
 
+export async function readJobCounter(chainId?: number): Promise<bigint> {
+  const cfg = getErc8183(chainId);
+  return erc8183PublicClient(cfg.chainId).readContract({
+    address: cfg.commerce,
+    abi: COMMERCE_ABI,
+    functionName: "jobCounter",
+  });
+}
+
+/** Next jobId if createJob does `++counter` (ids are 1..counter). */
+export async function readNextJobId(chainId?: number): Promise<bigint> {
+  const counter = await readJobCounter(chainId);
+  return counter + BigInt(1);
+}
+
 export async function readPaymentToken(chainId?: number): Promise<Address> {
   const cfg = getErc8183(chainId);
   const token = await erc8183PublicClient(cfg.chainId).readContract({

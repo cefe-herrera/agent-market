@@ -13,8 +13,11 @@ import {
 import { loadStoredJobs } from "@/app/lib/erc8183/jobs-store";
 import { readJob } from "@/app/lib/erc8183/read";
 import { JOB_STATUS_LABEL, JobStatus } from "@/app/lib/erc8183/types";
+import { BUYER_SAFE_SALT_NONCE } from "@/app/lib/aa/addresses";
+import { predictSafe7579Address } from "@/app/lib/aa/safe7579";
 import { loadStoredHires, type StoredX402Hire } from "@/app/lib/hires-store";
 import { x402PaymentConfig } from "@/app/lib/x402-usdc";
+import AgentSafePanel from "./AgentSafePanel";
 
 const ConnectWallet = dynamic(
   () => import("../connection/ConnectWallet"),
@@ -62,7 +65,25 @@ export default function MyAgents() {
 
     async function load() {
       const x402Hires = loadStoredHires(x402.chainId, account as string);
-      const jobs = loadStoredJobs(cfg.chainId, account as string);
+      let buyerSafe: string | null = null;
+      try {
+        buyerSafe = (
+          await predictSafe7579Address({
+            ownerAddress: account as `0x${string}`,
+            chainId: cfg.chainId,
+            saltNonce: BUYER_SAFE_SALT_NONCE,
+          })
+        ).address;
+      } catch {
+        /* prediction needs RPC; still show EOA-keyed jobs */
+      }
+      const jobs = [
+        ...loadStoredJobs(cfg.chainId, account as string),
+        ...(buyerSafe ? loadStoredJobs(cfg.chainId, buyerSafe) : []),
+      ].filter(
+        (job, index, all) =>
+          all.findIndex((item) => item.jobId === job.jobId) === index,
+      );
       const listed: ListedHire[] = x402Hires.map((hire: StoredX402Hire) => ({
         id: hire.id,
         rail: "x402",
@@ -128,6 +149,8 @@ export default function MyAgents() {
       <p className="mb-8 font-mono-data text-sm text-surface-500">
         {t("myAgents.subtitle")}
       </p>
+
+      {isConnected && account ? <AgentSafePanel /> : null}
 
       {!isConnected || !account ? (
         <div className="card py-12 text-center">

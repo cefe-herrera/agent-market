@@ -1,4 +1,5 @@
 import { getDemoSeller } from "@/app/lib/demo-agents";
+import { geminiAgentName, isGeminiAgentId } from "@/app/lib/gemini/catalog";
 import { resolveIndexerAgent } from "@/app/lib/indexer-bnb";
 import { X402_NETWORK, X402_PAYMENT_AMOUNT } from "@/app/lib/x402-usdc";
 
@@ -199,6 +200,24 @@ export async function resolvePaidWork(opts: {
   payTo?: string | null;
   settleTx?: string | null;
 }): Promise<AgentWork> {
+  if (isGeminiAgentId(opts.agentId)) {
+    const { runYieldOptimiser } = await import("@/app/lib/gemini/yield");
+    const json = await runYieldOptimiser({
+      payer: opts.payer,
+      capital: "1000",
+    });
+    return {
+      agent: opts.agentName || geminiAgentName(opts.agentId) || "Yield Router",
+      kind: opts.agentId,
+      source:
+        json.model === "gemini"
+          ? "gemini · yield optimisation"
+          : "gemini fallback · yield optimisation",
+      json,
+      receipt: receipt(opts),
+    };
+  }
+
   const demo = getDemoSeller(opts.agentId);
   if (demo) {
     return {

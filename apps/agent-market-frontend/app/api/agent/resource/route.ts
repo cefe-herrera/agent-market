@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAddress } from "viem";
 import { X402_NETWORK, usdcExactRequirements } from "@/app/lib/x402-usdc";
 import { getDemoSeller } from "@/app/lib/demo-agents";
+import { geminiAgentName, isGeminiAgentId } from "@/app/lib/gemini/catalog";
 import { resolvePaidWork } from "@/app/lib/agent-work";
 
 const FACILITATOR_URL = (
@@ -10,25 +11,29 @@ const FACILITATOR_URL = (
 
 function paymentRequired(url: string, sellerId?: string | null) {
   const demo = getDemoSeller(sellerId);
+  const gemini = isGeminiAgentId(sellerId);
+  const name = demo?.name ?? geminiAgentName(sellerId);
   const accepts = [usdcExactRequirements()];
   return {
     x402Version: 2,
     error: `PAYMENT-SIGNATURE required — exact $U EIP-3009 on ${X402_NETWORK}`,
     resource: {
       url,
-      description: demo
-        ? `${demo.name} — x402 seller (${X402_NETWORK} $U)`
+      description: name
+        ? `${name} — x402 seller (${X402_NETWORK} $U)`
         : `Latam Market Pay — x402 seller (${X402_NETWORK} $U)`,
       mimeType: "application/json",
       serviceName: demo?.agentId ?? sellerId ?? "LatamMarketPay",
-      tags: ["x402", "erc8004", "bnb"],
+      tags: gemini
+        ? ["x402", "gemini", "yield", "bnb"]
+        : ["x402", "erc8004", "bnb"],
     },
     accepts,
     extensions: {
       erc8004: {
         info: {
           agentId: sellerId ?? null,
-          name: demo?.name ?? null,
+          name: name ?? null,
         },
         schema: { type: "object" },
       },

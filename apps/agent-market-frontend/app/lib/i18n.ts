@@ -12,6 +12,11 @@ const en: Record<string, string> = {
   "nav.yield": "Yield",
   "nav.healthFactor": "Health Factor",
   "nav.myAgents": "My Agents",
+  "nav.sell": "Sell",
+  "sell.badge": "MERCHANT_01",
+  "sell.title": "Register a merchant",
+  "sell.subtitle":
+    "Mint or link an ERC-8004 identity, deploy your Agent Safe, download the agent key, and publish x402 + 8183 on the Agent Card.",
   "wallet.connect": "Connect Wallet",
   "wallet.connectPrompt":
     "Connect your wallet to view and manage your hired agents.",
@@ -63,6 +68,11 @@ const es: Record<string, string> = {
   "nav.yield": "Rendimiento",
   "nav.healthFactor": "Factor de Salud",
   "nav.myAgents": "Mis Agentes",
+  "nav.sell": "Vender",
+  "sell.badge": "COMERCIANTE_01",
+  "sell.title": "Registrar comerciante",
+  "sell.subtitle":
+    "Minteá o linkeá una identidad ERC-8004, creá el Agent Safe, descargá la agent key y publicá x402 + 8183 en el Agent Card.",
   "wallet.connect": "Conectar Wallet",
   "wallet.connectPrompt":
     "Conecta tu wallet para ver y gestionar tus agentes contratados.",
