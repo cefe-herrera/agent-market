@@ -80,8 +80,10 @@ function springTotal(body: SpringPage<unknown>): number | undefined {
 export function indexerOrigin(): string {
   const url =
     process.env.INDEXER_BNB_URL ||
-    process.env.NEXT_PUBLIC_INDEXER_BNB_URL ||
-    "http://127.0.0.1:8085";
+    process.env.NEXT_PUBLIC_INDEXER_BNB_URL;
+  if (!url?.trim()) {
+    throw new Error("Missing INDEXER_BNB_URL in env");
+  }
   return url.replace(/\/$/, "");
 }
 

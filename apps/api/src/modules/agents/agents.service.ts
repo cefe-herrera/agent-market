@@ -2,45 +2,20 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { A2aHealthDto, AgentDto, MarketplaceAgentDto } from '@bnb-marketplace/shared-types';
 import { Agent } from '@prisma/client';
-import { Erc8004ScanClient } from '../blockchain/erc8004/erc8004-scan.client';
+import { IndexerBnbService } from '../blockchain/indexer-bnb/indexer-bnb.service';
 import { Erc8004AgentResolver } from '../blockchain/erc8004/erc8004-agent.resolver';
-import {
-  buildChainMap,
-  fallbackChain,
-  mapScanListItemToMarketplaceAgent,
-} from '../blockchain/erc8004/erc8004-agent.mapper';
-import { NetworkConfig } from '../../common/network/network.config';
 
 @Injectable()
 export class AgentsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly scan: Erc8004ScanClient,
+    private readonly indexer: IndexerBnbService,
     private readonly resolver: Erc8004AgentResolver,
-    private readonly network: NetworkConfig,
   ) {}
 
   async findAll(): Promise<AgentDto[]> {
-    const [result, chains] = await Promise.all([
-      this.scan.listUsableAgents({
-        limit: 100,
-        offset: 0,
-        isTestnet: this.network.isTestnet,
-        chainId: this.network.chainId,
-      }),
-      this.scan.getChains(),
-    ]);
-
-    const chainMap = buildChainMap(chains);
-    const items = await this.scan.enrichCatalogItems(result.items);
-    return items
-      .filter((item) => item.chain_id === this.network.chainId)
-      .map((item) =>
-        mapScanListItemToMarketplaceAgent(
-          item,
-          chainMap.get(item.chain_id) ?? fallbackChain(item.chain_id),
-        ),
-      );
+    const result = await this.indexer.listAgents({ usable: true, limit: 100, page: 1 });
+    return result.data;
   }
 
   async findById(id: string): Promise<MarketplaceAgentDto> {
@@ -49,6 +24,9 @@ export class AgentsService {
     });
     if (agent) return this.toDto(agent);
 
+    const fromIndexer = await this.indexer.resolveAgent(id).catch(() => null);
+    if (fromIndexer) return fromIndexer;
+
     const fromScan = await this.resolver.resolveByIdOrSlug(id);
     if (fromScan) return fromScan;
 
@@ -56,11 +34,18 @@ export class AgentsService {
   }
 
   async getA2aHealth(id: string): Promise<A2aHealthDto> {
-    const fromScan = await this.resolver.resolveByIdOrSlug(id, { liveProbe: true });
-    if (!fromScan?.a2a) {
-      throw new NotFoundException(`Agent ${id} not found`);
+    const health = await this.indexer.probeA2aHealth(id).catch(() => null);
+    if (health && health.status !== 'missing') {
+      return health;
     }
-    return fromScan.a2a;
+
+    const fromScan = await this.resolver.resolveByIdOrSlug(id, { liveProbe: true });
+    if (fromScan?.a2a) {
+      return fromScan.a2a;
+    }
+
+    if (health) return health;
+    throw new NotFoundException(`Agent ${id} not found`);
   }
 
   async findBySlug(slug: string): Promise<AgentDto> {

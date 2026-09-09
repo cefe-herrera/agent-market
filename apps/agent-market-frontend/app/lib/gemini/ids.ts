@@ -1,3 +1,12 @@
+import {
+  agentCardPath,
+  agentGridApiPath,
+  agentHealthApiPath,
+  agentRebalanceApiPath,
+  agentYieldApiPath,
+  hireApiPathWithSeller,
+} from "@/app/lib/env-routes";
+
 export const YIELD_AGENT_ID = "bsc-yield-optimizer-01";
 export const YIELD_AGENT_ALIAS_IDS = ["demo:yield"] as const;
 
@@ -75,11 +84,11 @@ export const HEALTH_AGENT_NAME = "VenusGuard Loan Sentinel";
 export const HEALTH_AGENT_CATEGORY = "Health Factor";
 
 export function geminiCardPath(agentId: string): string {
-  return `/api/agent/card/${encodeURIComponent(agentId)}`;
+  return agentCardPath(agentId);
 }
 
 export function geminiHirePath(agentId: string): string {
-  return `/api/agent/resource?seller=${encodeURIComponent(agentId)}`;
+  return hireApiPathWithSeller(agentId);
 }
 
 export function yieldCardPath(agentId: string = YIELD_AGENT_ID): string {
@@ -91,7 +100,7 @@ export function yieldHirePath(agentId: string = YIELD_AGENT_ID): string {
 }
 
 export function yieldSnapshotPath(): string {
-  return "/api/agent/yield";
+  return agentYieldApiPath();
 }
 
 export function rebalanceCardPath(
@@ -107,7 +116,7 @@ export function rebalanceHirePath(
 }
 
 export function rebalanceSnapshotPath(): string {
-  return "/api/agent/rebalance";
+  return agentRebalanceApiPath();
 }
 
 export function gridCardPath(agentId: string = GRID_AGENT_ID): string {
@@ -119,7 +128,7 @@ export function gridHirePath(agentId: string = GRID_AGENT_ID): string {
 }
 
 export function gridSnapshotPath(): string {
-  return "/api/agent/grid";
+  return agentGridApiPath();
 }
 
 export function healthCardPath(agentId: string = HEALTH_AGENT_ID): string {
@@ -131,5 +140,5 @@ export function healthHirePath(agentId: string = HEALTH_AGENT_ID): string {
 }
 
 export function healthSnapshotPath(): string {
-  return "/api/agent/health";
+  return agentHealthApiPath();
 }

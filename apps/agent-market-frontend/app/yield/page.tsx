@@ -12,6 +12,7 @@ import { useI18n } from "@/app/context/I18nProvider";
 import { loadLocalMerchants } from "@/app/lib/merchant/client-store";
 import { mergeCatalogWithMerchants } from "@/app/lib/merchant/to-catalog";
 import type { PublicMerchant } from "@/app/lib/merchant/types";
+import { merchantApiPath } from "@/app/lib/env-routes";
 
 const WalletStatus = dynamic(
   () => import("@/app/components/connection/WalletStatus"),
@@ -41,7 +42,7 @@ export default function YieldPage() {
     );
     if (remembered?.tokenId) setTokenId(remembered.tokenId);
 
-    void fetch(`/api/merchant?id=${encodeURIComponent(YIELD_AGENT_ID)}`, {
+    void fetch(merchantApiPath(`?id=${encodeURIComponent(YIELD_AGENT_ID)}`), {
       cache: "no-store",
     })
       .then(async (res) => (res.ok ? ((await res.json()) as PublicMerchant) : null))

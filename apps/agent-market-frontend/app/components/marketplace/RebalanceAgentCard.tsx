@@ -6,8 +6,10 @@ import type { RebalanceCardPayload } from "@/app/lib/rebalance/types";
 import {
   REBALANCE_AGENT_ID,
   REBALANCE_AGENT_NAME,
+  rebalanceSnapshotPath,
 } from "@/app/lib/gemini/ids";
 import { REBALANCE_SKILLS } from "@/app/lib/gemini/skills";
+import { marketplaceAgentUrl } from "@/app/lib/nest-routes";
 
 const FALLBACK_CARD: RebalanceCardPayload = {
   agent_id: REBALANCE_AGENT_ID,
@@ -58,7 +60,7 @@ export default function RebalanceAgentCard({
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/agent/rebalance", { cache: "no-store" });
+        const res = await fetch(rebalanceSnapshotPath(), { cache: "no-store" });
         const json = (await res.json()) as RebalanceCardPayload;
         if (!res.ok) throw new Error("rebalance snapshot failed");
         if (!cancelled) {
@@ -83,7 +85,7 @@ export default function RebalanceAgentCard({
     setChecking(true);
     try {
       const res = await fetch(
-        `/api/marketplace/agents/${encodeURIComponent(agent.agentId)}/a2a-health`,
+        marketplaceAgentUrl(agent.agentId, "/a2a-health"),
         { cache: "no-store" },
       );
       setHealth(

@@ -13,6 +13,7 @@ import {
   isSameAddress,
   parseTokenId,
 } from "@/app/lib/erc8004";
+import { hireFeedbackUri } from "@/app/lib/nest-routes";
 
 export default function FeedbackButton({
   enabled,
@@ -59,7 +60,7 @@ export default function FeedbackButton({
           0,
           "x402",
           "quality",
-          `${window.location.origin}/api/agent/resource?seller=${encodeURIComponent(agentId)}`,
+          hireFeedbackUri(window.location.origin, agentId),
           "",
           zeroHash,
         ],

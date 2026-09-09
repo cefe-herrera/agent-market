@@ -9,10 +9,15 @@ import { Erc8004ReputationClient } from './erc8004/erc8004-reputation.client';
 import { A2aHealthClient } from './erc8004/a2a-health.client';
 import { AgentVerificationService } from './erc8004/agent-verification.service';
 import { AgentVerificationScheduler } from './erc8004/agent-verification.scheduler';
+import { IndexerBnbClient } from './indexer-bnb/indexer-bnb.client';
+import { IndexerBnbService } from './indexer-bnb/indexer-bnb.service';
+import { NetworkModule } from '../../common/network/network.module';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, NetworkModule],
   providers: [
+    IndexerBnbClient,
+    IndexerBnbService,
     Erc8004ScanClient,
     Erc8004AgentResolver,
     Erc8004ReputationClient,
@@ -43,6 +48,8 @@ import { AgentVerificationScheduler } from './erc8004/agent-verification.schedul
     Erc8004ReputationClient,
     A2aHealthClient,
     AgentVerificationService,
+    IndexerBnbService,
+    IndexerBnbClient,
   ],
 })
 export class BlockchainModule {}

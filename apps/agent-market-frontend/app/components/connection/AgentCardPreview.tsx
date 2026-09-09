@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { AgentCardPreview } from "@/app/lib/agent-card";
+import { marketplaceAgentUrl } from "@/app/lib/nest-routes";
 
 export default function AgentCardPreviewPanel({
   agentId,
@@ -26,7 +27,7 @@ export default function AgentCardPreviewPanel({
     setError(null);
     setCard(null);
     setShowRaw(false);
-    void fetch(`/api/marketplace/agents/${encodeURIComponent(agentId)}/card`, {
+    void fetch(marketplaceAgentUrl(agentId, "/card"), {
       cache: "no-store",
     })
       .then(async (res) => {

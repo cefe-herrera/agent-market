@@ -1,7 +1,7 @@
 #!/usr/bin/env npx tsx
 /**
  * Polls FUNDED 8183 jobs for AGENT_SAFE_ADDRESS and submits a stub
- * via the session key (POST /api/agent/8183/submit).
+ * via the session key (POST NEXT_PUBLIC_AGENT_8183_SUBMIT_API).
  *
  *   npx tsx scripts/agent-submit-worker.ts
  *
@@ -33,15 +33,19 @@ function loadEnvLocal() {
 
 loadEnvLocal();
 
-const BASE = (process.env.AGENT_WORKER_URL ?? "http://127.0.0.1:3000").replace(
-  /\/$/,
-  "",
-);
+const BASE = (process.env.AGENT_WORKER_URL ?? "").replace(/\/$/, "");
+if (!BASE) {
+  throw new Error("Missing AGENT_WORKER_URL in env");
+}
+const SUBMIT = process.env.NEXT_PUBLIC_AGENT_8183_SUBMIT_API?.trim();
+if (!SUBMIT) {
+  throw new Error("Missing NEXT_PUBLIC_AGENT_8183_SUBMIT_API in env");
+}
 const SECRET = process.env.AGENT_WORKER_SECRET ?? "";
 const INTERVAL_MS = Number(process.env.AGENT_WORKER_INTERVAL_MS ?? 15_000);
 
 async function tick() {
-  const res = await fetch(`${BASE}/api/agent/8183/submit`, {
+  const res = await fetch(`${BASE}${SUBMIT.startsWith("/") ? SUBMIT : `/${SUBMIT}`}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",

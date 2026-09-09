@@ -4,6 +4,7 @@ import { AgentsService } from './agents.service';
 import { AnalyticsPublicService } from '../analytics/analytics-public.service';
 import { SecurityPublicService } from '../security/security-public.service';
 import { Erc8004ReputationClient } from '../blockchain/erc8004/erc8004-reputation.client';
+import { IndexerBnbService } from '../blockchain/indexer-bnb/indexer-bnb.service';
 
 @ApiTags('agents')
 @Controller('agents')
@@ -13,6 +14,7 @@ export class AgentsController {
     private readonly analyticsService: AnalyticsPublicService,
     private readonly securityService: SecurityPublicService,
     private readonly reputation: Erc8004ReputationClient,
+    private readonly indexer: IndexerBnbService,
   ) {}
 
   @Get()
@@ -22,8 +24,10 @@ export class AgentsController {
   }
 
   @Get(':id/reputation')
-  @ApiOperation({ summary: 'Read ERC-8004 reputation feedback for an agent token id' })
+  @ApiOperation({ summary: 'Read agent reputation from BNB indexer (8004scan fallback)' })
   async getReputation(@Param('id') id: string) {
+    const fromIndexer = await this.indexer.getReputation(id).catch(() => null);
+    if (fromIndexer) return fromIndexer;
     const data = await this.reputation.getReputation(id);
     if (!data) {
       throw new NotFoundException(

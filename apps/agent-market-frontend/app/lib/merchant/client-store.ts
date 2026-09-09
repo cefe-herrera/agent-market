@@ -1,5 +1,6 @@
 import type { Address } from "viem";
 import { merchantMatchesId, type LocalMerchant, type PublicMerchant } from "./types";
+import { merchantApiPath } from "@/app/lib/env-routes";
 
 const KEY = "merchant.listings.v1";
 
@@ -48,7 +49,7 @@ export function local8183Provider(
 export async function publishMerchant(
   listing: PublicMerchant,
 ): Promise<void> {
-  await fetch("/api/merchant", {
+  await fetch(merchantApiPath(), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(listing),

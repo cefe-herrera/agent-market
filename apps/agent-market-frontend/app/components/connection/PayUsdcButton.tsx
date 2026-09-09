@@ -13,6 +13,7 @@ import {
 import {
   signExactUsdcPayment,
 } from "@/app/lib/x402-client";
+import { hireResourceUrl } from "@/app/lib/nest-routes";
 import type { AgentWork } from "@/app/lib/agent-work";
 import { newHireId, rememberHire } from "@/app/lib/hires-store";
 import FeedbackButton from "./FeedbackButton";
@@ -103,7 +104,7 @@ export default function PayUsdcButton({
       setStatus("signing");
       const body = await signExactUsdcPayment(walletClient, account, payTo);
       setStatus("settling");
-      const hire = await fetch("/api/agent/resource", {
+      const hire = await fetch(hireResourceUrl(selectedAgentId), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

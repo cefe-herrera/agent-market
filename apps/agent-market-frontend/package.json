@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "dev:mainnet": "cross-env NEXT_PUBLIC_NETWORK=mainnet NETWORK=mainnet next dev",
-    "dev:testnet": "cross-env NEXT_PUBLIC_NETWORK=testnet NETWORK=testnet next dev",
+    "dev": "next dev -p 3001",
+    "dev:mainnet": "cross-env NEXT_PUBLIC_NETWORK=mainnet NETWORK=mainnet next dev -p 3001",
+    "dev:testnet": "cross-env NEXT_PUBLIC_NETWORK=testnet NETWORK=testnet next dev -p 3001",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3001",
     "lint": "eslint",
     "agent:submit": "npx tsx scripts/agent-submit-worker.ts"
   },

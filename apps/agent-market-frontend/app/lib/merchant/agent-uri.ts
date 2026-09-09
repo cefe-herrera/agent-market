@@ -1,4 +1,5 @@
 import { YIELD_AGENT_ID, yieldCardPath, yieldHirePath } from "@/app/lib/gemini/ids";
+import { merchantCardPath } from "@/app/lib/env-routes";
 import { cardToDataUri } from "./card";
 
 export type AgentUriMode = "live" | "snapshot";
@@ -26,10 +27,7 @@ export function liveYieldHireUrl(origin: string): string {
 }
 
 export function liveMerchantCardUrl(origin: string, agentId: string): string {
-  return joinOrigin(
-    origin,
-    `/api/merchant/card/${encodeURIComponent(agentId)}`,
-  );
+  return joinOrigin(origin, merchantCardPath(agentId));
 }
 
 export function resolveAgentUri(opts: {

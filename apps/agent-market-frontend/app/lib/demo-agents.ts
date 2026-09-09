@@ -1,5 +1,6 @@
 import { X402_PAY_TO } from "@/app/lib/x402-usdc";
 import type { MarketplaceAgent } from "@/app/lib/agents";
+import { hireApiPathWithSeller } from "@/app/lib/env-routes";
 
 export const DEMO_AGENT_IDS = [
   "demo:fx-desk",
@@ -109,7 +110,7 @@ export function demoMarketplaceAgents(): MarketplaceAgent[] {
     shortDescription: seller.shortDescription,
     ownerWallet: X402_PAY_TO,
     agentWallet: X402_PAY_TO,
-    agentUri: `/api/agent/resource?seller=${seller.agentId}`,
+    agentUri: hireApiPathWithSeller(seller.agentId),
     network: "BSC Testnet",
     chainId: 97,
     isTestnet: true,

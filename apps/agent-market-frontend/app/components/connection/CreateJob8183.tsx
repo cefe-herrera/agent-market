@@ -21,6 +21,8 @@ import {
   type Erc8183Wallet,
 } from "@/app/lib/erc8183/write";
 import { geminiAgentKind } from "@/app/lib/gemini/ids";
+import { marketplaceAgentUrl } from "@/app/lib/nest-routes";
+import { merchantApiPath } from "@/app/lib/env-routes";
 
 const STEPS = ["checking", "bundling", "creating", "funding", "done"] as const;
 
@@ -105,11 +107,11 @@ export default function CreateJob8183({
       }
       try {
         const [listingRes, cardRes] = await Promise.all([
-          fetch(`/api/merchant?id=${encodeURIComponent(selectedAgentId)}`, {
+          fetch(merchantApiPath(`?id=${encodeURIComponent(selectedAgentId)}`), {
             cache: "no-store",
           }),
           fetch(
-            `/api/marketplace/agents/${encodeURIComponent(selectedAgentId)}/card`,
+            marketplaceAgentUrl(selectedAgentId, "/card"),
             { cache: "no-store" },
           ),
         ]);

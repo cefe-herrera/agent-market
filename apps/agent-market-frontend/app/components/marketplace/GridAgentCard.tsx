@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import type { MarketplaceAgent } from "@/app/lib/agents";
 import type { GridCardPayload } from "@/app/lib/grid/types";
-import { GRID_AGENT_ID, GRID_AGENT_NAME } from "@/app/lib/gemini/ids";
+import { GRID_AGENT_ID, GRID_AGENT_NAME, gridSnapshotPath } from "@/app/lib/gemini/ids";
 import { GRID_SKILLS } from "@/app/lib/gemini/skills";
+import { marketplaceAgentUrl } from "@/app/lib/nest-routes";
 
 const FALLBACK_CARD: GridCardPayload = {
   agent_id: GRID_AGENT_ID,
@@ -56,7 +57,7 @@ export default function GridAgentCard({
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/agent/grid", { cache: "no-store" });
+        const res = await fetch(gridSnapshotPath(), { cache: "no-store" });
         const json = (await res.json()) as GridCardPayload;
         if (!res.ok) throw new Error("grid snapshot failed");
         if (!cancelled) {
@@ -81,7 +82,7 @@ export default function GridAgentCard({
     setChecking(true);
     try {
       const res = await fetch(
-        `/api/marketplace/agents/${encodeURIComponent(agent.agentId)}/a2a-health`,
+        marketplaceAgentUrl(agent.agentId, "/a2a-health"),
         { cache: "no-store" },
       );
       setHealth(

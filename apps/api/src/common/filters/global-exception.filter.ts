@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { IndexerHttpError } from '../../modules/blockchain/indexer-bnb/indexer-bnb.types';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -16,6 +17,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+
+    if (exception instanceof IndexerHttpError) {
+      this.logger.error(`${request.method} ${request.url} - 502 indexer`);
+      response.status(HttpStatus.BAD_GATEWAY).json({
+        success: false,
+        error: `Indexer unavailable: ${exception.message}`,
+        details: exception.body,
+      });
+      return;
+    }
 
     const status =
       exception instanceof HttpException

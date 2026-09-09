@@ -21,6 +21,7 @@ import {
   YIELD_AGENT_ID,
   YIELD_AGENT_NAME,
 } from "@/app/lib/gemini/ids";
+import { hireApiPath, merchantCardPath, agentCardPath } from "@/app/lib/env-routes";
 import { buildMerchantCard } from "@/app/lib/merchant/card";
 import {
   type AgentUriMode,
@@ -227,7 +228,7 @@ export default function SellWizard() {
       cardUrl:
         uriMode === "live"
           ? liveUrl.trim()
-          : `/api/merchant/card/${encodeURIComponent(isYield ? YIELD_AGENT_ID : opts.agentId)}`,
+          : merchantCardPath(isYield ? YIELD_AGENT_ID : opts.agentId),
       uriMode,
       createdAt: Date.now(),
     };
@@ -424,7 +425,7 @@ export default function SellWizard() {
           <input
             value={a2a}
             onChange={(e) => setA2a(e.target.value)}
-            placeholder="https://…/api/agent/resource?seller=…"
+            placeholder={`https://…${hireApiPath()}?seller=…`}
             className="input-field h-11 text-xs"
           />
         </label>
@@ -463,7 +464,7 @@ export default function SellWizard() {
             <input
               value={liveUrl}
               onChange={(e) => setLiveUrl(e.target.value)}
-              placeholder="https://tu-dominio/api/agent/card/bsc-yield-optimizer-01"
+              placeholder={`https://tu-dominio${agentCardPath(YIELD_AGENT_ID)}`}
               className="input-field h-11 text-xs"
             />
           </label>

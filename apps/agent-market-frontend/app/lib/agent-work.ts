@@ -1,7 +1,8 @@
 import { getDemoSeller } from "@/app/lib/demo-agents";
 import { geminiAgentName } from "@/app/lib/gemini/catalog";
 import { geminiAgentKind } from "@/app/lib/gemini/ids";
-import { resolveIndexerAgent } from "@/app/lib/indexer-bnb";
+import { getPublicMerchant } from "@/app/lib/merchant/server-store";
+import { fetchNestUrl, readNestJson, nestMarketplaceUrl, joinUrl } from "@/app/lib/nest-server";
 import { X402_NETWORK, X402_PAYMENT_AMOUNT } from "@/app/lib/x402-usdc";
 
 export type AgentWork = {
@@ -151,11 +152,14 @@ async function fetchIndexedJson(agentId: string): Promise<{
 }> {
   let indexer: unknown = null;
   try {
-    const agent = await resolveIndexerAgent(agentId);
-    indexer = agent ?? { error: "Agent not found in indexer" };
+    const res = await fetchNestUrl(
+      joinUrl(nestMarketplaceUrl(), "agents", encodeURIComponent(agentId)),
+    );
+    const { json } = await readNestJson(res);
+    indexer = res.ok && json ? json : { error: "Agent not found in Nest catalog" };
   } catch (err) {
     return {
-      source: "indexer",
+      source: "nest",
       json: { error: err instanceof Error ? err.message : String(err) },
     };
   }
@@ -270,6 +274,21 @@ export async function resolvePaidWork(opts: {
           ? "gemini · yield optimisation"
           : "gemini fallback · yield optimisation",
       json,
+      receipt: receipt(opts),
+    };
+  }
+
+  const merchant = getPublicMerchant(opts.agentId);
+  if (merchant) {
+    return {
+      agent: opts.agentName || merchant.name,
+      kind: opts.agentId,
+      source: "merchant · hire",
+      json: {
+        hired: true,
+        merchant: merchant.agentId,
+        name: merchant.name,
+      },
       receipt: receipt(opts),
     };
   }

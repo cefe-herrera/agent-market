@@ -1,6 +1,6 @@
 # Infraestructura agentica — Nest, indexer, front, rieles
 
-Documento de contexto para el hackathon. Distingue **esta rama** (Next híbrido) de **`main-branch/apps/api`** (Nest como API única). No es el corte `armando`: hoy el browser sigue pegándole a Next `:3000`.
+Documento de contexto para el hackathon. Distingue **esta rama** (híbrido Nest + Next) de **`main-branch/apps/api`** (Nest como API única). El browser solo pega a Next `:3001` `/api/*`; Next proxea Nest HTTP (`NEST_API_URL`). Gemini/sell/8183 siguen en Next.
 
 ---
 
@@ -29,17 +29,20 @@ El facilitator x402 **no cobra fees** del micropago. El `0.001 $U` va entero al 
 
 ## 2. Mapa de procesos
 
-### Esta rama (lo que corre la demo)
+### Esta rama (híbrido Nest + Next)
 
 ```
-Browser ──► Next :3000  (UI + BFF)
-              ├─ /api/marketplace/*     ──► indexer Java :8085
-              ├─ /api/agent/resource    ──► facilitator Rust :8080  + Gemini / yield / rebalance
-              ├─ /api/x402/settle       ──► facilitator :8080
-              ├─ /api/agent/{yield,rebalance,card,8183}
-              └─ /api/merchant*         ── /sell (8004)
+Browser ──► Next UI :3001  /api/*   (mismo origen; HTTPS en prod)
+              ├─ /api/marketplace/*  ──► Nest :3000 /api/v1/marketplace/*
+              ├─ /api/x402/settle    ──► Nest :3000 /api/v1/x402/settle
+              ├─ /api/agent/resource ──► Nest settle / resource
+              └─ /api/agent/{yield,grid,health,rebalance,card,8183}
+                 /api/merchant*   (Next BFF)
 
-Nest :3005          (marketplace viejo; el hire no depende de él)
+Nest :3000  (HTTP; NEST_API_URL en el BFF)
+  ├─ marketplace/*  ──► indexer Java :8085
+  ├─ x402/settle    ──► facilitator Rust :8080
+  └─ agent/resource ──► facilitator :8080
 ```
 
 ### Destino `main-branch` (`apps/api`, commit tipo *delete bff*)
@@ -76,7 +79,7 @@ Nest 11 + Prisma + Swagger. **No usa viem** (el typecheck de Nest + `ox` explota
 | `HiringModule` | Mock hire/revoke (no 8183) |
 | `NetworkModule` | `NETWORK=mainnet\|testnet` → chain 56 / 97 y token `$U` |
 
-Env que Nest necesita para ser el único origen: `FACILITATOR_URL`, `INDEXER_BNB_URL`, `NETWORK`, `U_TOKEN_*`, `X402_PAY_TO`, `CORS_ORIGIN` (incluye `:3000` y `:3001` / Angular `:4200`).
+Env que Nest necesita: `FACILITATOR_URL`, `INDEXER_BNB_URL`, `NETWORK`, `U_TOKEN_*`, `X402_PAY_TO`, `CORS_ORIGIN` (incluye `:3000` y `:3001` / Angular `:4200`). Next solo necesita `NEST_API_URL` (server, HTTP OK). No pongas `NEXT_PUBLIC_API_*` ni `FACILITATOR_URL` / `INDEXER_BNB_URL` en el front.
 
 Errores hacia el front: `{ success, error, details }`. Fallo de indexer → **502**, no 500 suelto.
 
@@ -155,7 +158,7 @@ La demo que estamos mostrando es **Next**:
 - Dock de contratación (popup abajo-derecha): x402 CTA + accordion 8183
 - Wallet wagmi; pagos EIP-3009 desde la EOA
 
-BFF Next `app/api/marketplace/[...path]` es el mismo contrato v1 que Nest, para no esperar `armando`.
+BFF Next `app/api/marketplace/[...path]` queda como fallback para Gemini + merchants. El catálogo indexer y el x402 de terceros van a Nest `/api/v1`.
 
 ---
 
@@ -204,12 +207,11 @@ Un agente externo hoy puede: leer el card, pagar x402, recibir JSON. Todavía **
 ## 9. Cómo correrlo (esta rama)
 
 ```bash
-# indexer Java :8085  +  facilitator :8080  +  Next
+# indexer Java :8085  +  facilitator :8080  +  Nest :3000  +  Next :3001
 NETWORK=mainnet docker compose up          # facilitator; signer con BNB
 # indexer: apps/indexer-bnb (local.properties)
-cd apps/agent-market-frontend && npm run dev:mainnet   # :3000
+npm run dev:api:mainnet                    # Nest :3000
+cd apps/agent-market-frontend && npm run dev:mainnet   # :3001
 ```
 
 Claves **server-only** (nunca `NEXT_PUBLIC_`): `GEMINI_API_KEY`, `COINGECKO_API_KEY`, `AGENT_SESSION_PRIVATE_KEY`, Pimlico. WalletConnect sí es public.
-
-No mintear 8004 ni cortar a Nest-only hasta que lo pidan.

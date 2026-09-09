@@ -21,6 +21,7 @@ import {
   isYieldAgentId,
 } from "@/app/lib/gemini/catalog";
 import { frontendBscChainId, frontendNetworkMode } from "@/app/lib/network";
+import { marketplaceAgentsUrl, marketplaceAgentUrl } from "@/app/lib/nest-routes";
 import YieldAgentCard from "./YieldAgentCard";
 import RebalanceAgentCard from "./RebalanceAgentCard";
 import GridAgentCard from "./GridAgentCard";
@@ -74,9 +75,11 @@ export default function AgentCatalog({
 
   async function fetchCatalog(expandOpen: boolean) {
     const res = await fetch(
-      `/api/marketplace/agents?isTestnet=${isTestnet}&chainId=${chainId}&usable=true${
-        expandOpen ? "&open=true" : ""
-      }`,
+      marketplaceAgentsUrl(
+        `?isTestnet=${isTestnet}&chainId=${chainId}&usable=true${
+          expandOpen ? "&open=true" : ""
+        }`,
+      ),
       { cache: "no-store" },
     );
     const payload = (await res.json().catch(() => null)) as
@@ -100,7 +103,7 @@ export default function AgentCatalog({
       throw new Error(
         nested
           ? String(nested)
-          : `API ${res.status} — indexer en ${process.env.NEXT_PUBLIC_INDEXER_BNB_URL || "http://127.0.0.1:8085"}`,
+          : `API ${res.status} — catálogo`,
       );
     }
     const list = Array.isArray(payload)
@@ -202,7 +205,7 @@ export default function AgentCatalog({
     setChecking(agent.agentId);
     try {
       const res = await fetch(
-        `/api/marketplace/agents/${encodeURIComponent(agent.agentId)}/a2a-health`,
+        marketplaceAgentUrl(agent.agentId, "/a2a-health"),
         { cache: "no-store" },
       );
       const json = (await res.json()) as A2aHealth;
@@ -231,7 +234,7 @@ export default function AgentCatalog({
     setLoadingEndpoint(agent.agentId);
     try {
       const res = await fetch(
-        `/api/marketplace/agents/${encodeURIComponent(agent.agentId)}`,
+        marketplaceAgentUrl(agent.agentId),
         { cache: "no-store" },
       );
       const json = (await res.json()) as MarketplaceAgent;

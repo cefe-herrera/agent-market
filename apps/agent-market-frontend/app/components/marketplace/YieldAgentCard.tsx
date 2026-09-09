@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import type { MarketplaceAgent } from "@/app/lib/agents";
 import type { YieldCardPayload } from "@/app/lib/yield/types";
-import { YIELD_AGENT_ID, YIELD_AGENT_NAME } from "@/app/lib/gemini/ids";
+import { YIELD_AGENT_ID, YIELD_AGENT_NAME, yieldSnapshotPath } from "@/app/lib/gemini/ids";
 import { YIELD_SKILLS } from "@/app/lib/gemini/skills";
+import { marketplaceAgentUrl } from "@/app/lib/nest-routes";
 
 const FALLBACK_CARD: YieldCardPayload = {
   agent_id: YIELD_AGENT_ID,
@@ -60,7 +61,7 @@ export default function YieldAgentCard({
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/agent/yield", { cache: "no-store" });
+        const res = await fetch(yieldSnapshotPath(), { cache: "no-store" });
         const json = (await res.json()) as YieldCardPayload;
         if (!res.ok) throw new Error("yield snapshot failed");
         if (!cancelled) {
@@ -85,7 +86,7 @@ export default function YieldAgentCard({
     setChecking(true);
     try {
       const res = await fetch(
-        `/api/marketplace/agents/${encodeURIComponent(agent.agentId)}/a2a-health`,
+        marketplaceAgentUrl(agent.agentId, "/a2a-health"),
         { cache: "no-store" },
       );
       setHealth((await res.json()) as { healthy?: boolean; status?: string; error?: string | null });

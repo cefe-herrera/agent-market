@@ -18,6 +18,12 @@ import {
   yieldHirePath,
 } from "@/app/lib/gemini/ids";
 import { X402_PAYMENT_USDC, x402PaymentConfig } from "@/app/lib/x402-usdc";
+import {
+  hireApiPath,
+  hireApiPathWithSeller,
+  marketplaceAgentPath,
+  marketplaceAgentsPath,
+} from "@/app/lib/env-routes";
 
 export const AGENT_CARD_PATH = "/.well-known/agent-card.json";
 export const LLMS_TXT_PATH = "/llms.txt";
@@ -64,7 +70,7 @@ export function agentDiscoveryOptions(origin?: string) {
 export function marketplaceHubCard(origin: string): Record<string, unknown> {
   const x402 = x402PaymentConfig();
   const base = origin.replace(/\/$/, "");
-  const hire = `${base}/api/agent/resource`;
+  const hire = `${base}${hireApiPath()}`;
   return {
     name: "4Agents",
     description:
@@ -79,7 +85,7 @@ export function marketplaceHubCard(origin: string): Record<string, unknown> {
         id: "catalog",
         name: "List consumable agents",
         description:
-          "GET /api/marketplace/agents?usable=true — schema-valid A2A/MCP only.",
+          "GET catalog usable=true — schema-valid A2A/MCP only.",
         tags: ["erc-8004", "catalog"],
       },
       {
@@ -102,7 +108,7 @@ export function marketplaceHubCard(origin: string): Record<string, unknown> {
       { name: "x402", endpoint: hire, version: "1" },
       {
         name: "catalog",
-        endpoint: `${base}/api/marketplace/agents?usable=true`,
+        endpoint: `${base}${marketplaceAgentsPath("?usable=true")}`,
         version: "1",
       },
     ],
@@ -160,14 +166,15 @@ BNB Chain marketplace for autonomous DeFi agents (ERC-8004 discovery).
 - Rebalance card: ${base}${rebalanceCardPath()}
 - Grid card: ${base}${gridCardPath()}
 - Health card: ${base}${healthCardPath()}
-- Hire (GET = 402, POST = settle): ${base}/api/agent/resource?seller=${YIELD_AGENT_ID}
-- Catalog (consumable only): ${base}/api/marketplace/agents?usable=true
-- A2A health: ${base}/api/marketplace/agents/{id}/a2a-health
+- Hire first-party Gemini (GET = 402, POST = settle): ${base}${hireApiPathWithSeller(YIELD_AGENT_ID)}
+- Hire indexer agents: ${base}${hireApiPath()}
+- Catalog (consumable only): ${base}${marketplaceAgentsPath("?usable=true")}
+- A2A health (indexer): ${base}${marketplaceAgentPath("{id}", "/a2a-health")}
 
 ## Hire flow
 
 1. GET the Agent Card (free JSON).
-2. GET /api/agent/resource?seller={agentId} → HTTP 402 + payment requirements.
+2. GET ${hireApiPath()}?seller={agentId} → HTTP 402 + payment requirements.
 3. Sign transferWithAuthorization (EIP-3009) for ${X402_PAYMENT_USDC} $U. \`to\` must not be the signing wallet.
 4. POST the payment payload with headers x-agent-id and x-agent-name.
 5. Receive JSON work. Skills are prompt policy, not on-chain execution.

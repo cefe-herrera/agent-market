@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import type { MarketplaceAgent } from "@/app/lib/agents";
 import type { HealthCardPayload } from "@/app/lib/health/types";
-import { HEALTH_AGENT_ID, HEALTH_AGENT_NAME } from "@/app/lib/gemini/ids";
+import { HEALTH_AGENT_ID, HEALTH_AGENT_NAME, healthSnapshotPath } from "@/app/lib/gemini/ids";
 import { HEALTH_SKILLS } from "@/app/lib/gemini/skills";
+import { marketplaceAgentUrl } from "@/app/lib/nest-routes";
 
 const FALLBACK_CARD: HealthCardPayload = {
   agent_id: HEALTH_AGENT_ID,
@@ -59,7 +60,7 @@ export default function HealthAgentCard({
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/agent/health", { cache: "no-store" });
+        const res = await fetch(healthSnapshotPath(), { cache: "no-store" });
         const json = (await res.json()) as HealthCardPayload;
         if (!res.ok) throw new Error("health snapshot failed");
         if (!cancelled) {
@@ -84,7 +85,7 @@ export default function HealthAgentCard({
     setChecking(true);
     try {
       const res = await fetch(
-        `/api/marketplace/agents/${encodeURIComponent(agent.agentId)}/a2a-health`,
+        marketplaceAgentUrl(agent.agentId, "/a2a-health"),
         { cache: "no-store" },
       );
       setHealth(

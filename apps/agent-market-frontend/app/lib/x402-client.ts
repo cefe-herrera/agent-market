@@ -6,6 +6,7 @@ import {
   x402PaymentConfig,
   usdcExactRequirements,
 } from "@/app/lib/x402-usdc";
+import { x402SettleUrl } from "@/app/lib/nest-routes";
 
 const eip3009Types = {
   TransferWithAuthorization: [
@@ -106,7 +107,7 @@ export type X402SettleResult = {
 export async function settleExactUsdcPayment(
   body: Awaited<ReturnType<typeof signExactUsdcPayment>>,
 ): Promise<X402SettleResult> {
-  const res = await fetch("/api/x402/settle", {
+  const res = await fetch(x402SettleUrl(), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

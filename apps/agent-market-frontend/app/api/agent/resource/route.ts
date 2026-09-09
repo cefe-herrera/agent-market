@@ -10,10 +10,16 @@ import {
   agentDiscoveryOptions,
   requestOrigin,
 } from "@/app/lib/agent-discovery";
+import { fetchNestUrl, proxyToNest, readNestJson, unwrapNestPayload, nestAgentResourceUrl, nestX402SettleUrl } from "@/app/lib/nest-server";
 
-const FACILITATOR_URL = (
-  process.env.FACILITATOR_URL ?? "http://127.0.0.1:8080"
-).replace(/\/$/, "");
+export const maxDuration = 120;
+
+function handleResourceLocally(id: string | null): boolean {
+  if (!id) return true;
+  if (isGeminiAgentId(id)) return true;
+  if (getPublicMerchant(id)) return true;
+  return false;
+}
 
 function paymentRequired(url: string, sellerId?: string | null) {
   const demo = getDemoSeller(sellerId);
@@ -56,22 +62,6 @@ function paymentRequired(url: string, sellerId?: string | null) {
   };
 }
 
-async function postFacilitator(path: "/verify" | "/settle", body: unknown) {
-  const res = await fetch(`${FACILITATOR_URL}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const text = await res.text();
-  let json: unknown = null;
-  try {
-    json = text ? JSON.parse(text) : null;
-  } catch {
-    json = null;
-  }
-  return { ok: res.ok, status: res.status, json, text };
-}
-
 function paymentAddresses(body: unknown): { payer?: string; payTo?: string } {
   const typed = body as {
     paymentPayload?: {
@@ -94,8 +84,21 @@ export function OPTIONS(request: Request) {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const origin = requestOrigin(request);
+  const seller = url.searchParams.get("seller");
+  if (!handleResourceLocally(seller)) {
+    const proxied = await proxyToNest(nestAgentResourceUrl(), request, {
+      search: url.search,
+    });
+    const { json } = await readNestJson(proxied);
+    if (json && typeof json === "object") {
+      const rec = json as { resource?: { url?: string } };
+      if (rec.resource) rec.resource.url = url.toString();
+      return agentDiscoveryJson(json, { status: proxied.status, origin });
+    }
+    return proxied;
+  }
   return agentDiscoveryJson(
-    paymentRequired(url.toString(), url.searchParams.get("seller")),
+    paymentRequired(url.toString(), seller),
     { status: 402, origin },
   );
 }
@@ -104,6 +107,11 @@ export async function POST(request: Request) {
   const agentId = request.headers.get("x-agent-id");
   const agentName = request.headers.get("x-agent-name");
   const origin = requestOrigin(request);
+
+  if (!handleResourceLocally(agentId)) {
+    return proxyToNest(nestAgentResourceUrl(), request);
+  }
+
   if (!agentId) {
     return agentDiscoveryJson(
       {
@@ -138,36 +146,29 @@ export async function POST(request: Request) {
     );
   }
 
-  const verified = await postFacilitator("/verify", body);
-  const verifyJson = verified.json as { isValid?: boolean; payer?: string };
-
-  if (!verified.ok || verifyJson?.isValid === false) {
-    return agentDiscoveryJson(
-      {
-        success: false,
-        error: "x402 verify failed",
-        details: verified.json ?? verified.text,
-      },
-      { status: 402, origin },
-    );
-  }
-
-  const settled = await postFacilitator("/settle", body);
-  const settleJson = settled.json as {
+  const nestRes = await fetchNestUrl(nestX402SettleUrl(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const { json, text } = await readNestJson(nestRes);
+  const settleJson = (unwrapNestPayload(json) ?? {}) as {
     success?: boolean;
     transaction?: string;
     payer?: string;
     network?: string;
+    error?: string;
+    details?: unknown;
   };
 
-  if (!settled.ok || settleJson.success === false) {
+  if (!nestRes.ok || settleJson.success === false) {
     return agentDiscoveryJson(
       {
         success: false,
-        error: "x402 settle failed",
-        details: settled.json ?? settled.text,
+        error: settleJson.error ?? "x402 settle failed",
+        details: settleJson.details ?? json ?? text,
       },
-      { status: 402, origin },
+      { status: nestRes.status === 502 ? 502 : 402, origin },
     );
   }
 
@@ -175,7 +176,7 @@ export async function POST(request: Request) {
   const work = await resolvePaidWork({
     agentId,
     agentName,
-    payer: settleJson.payer ?? verifyJson.payer ?? payer,
+    payer: settleJson.payer ?? payer,
     payTo,
     settleTx: settleJson.transaction,
   });
@@ -184,7 +185,7 @@ export async function POST(request: Request) {
     {
       success: true,
       transaction: settleJson.transaction,
-      payer: settleJson.payer ?? verifyJson.payer ?? payer,
+      payer: settleJson.payer ?? payer,
       network: settleJson.network,
       agentId,
       work,
