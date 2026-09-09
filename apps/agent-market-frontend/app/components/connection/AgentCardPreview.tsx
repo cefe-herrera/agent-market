@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { AgentCardPreview } from "@/app/lib/agent-card";
+import { apiV1 } from "@/app/lib/api";
 
 export default function AgentCardPreviewPanel({
   agentId,
@@ -24,7 +25,7 @@ export default function AgentCardPreviewPanel({
     setError(null);
     setCard(null);
     setShowRaw(false);
-    void fetch(`/api/marketplace/agents/${encodeURIComponent(agentId)}/card`, {
+    void fetch(apiV1(`/marketplace/agents/${encodeURIComponent(agentId)}/card`), {
       cache: "no-store",
     })
       .then(async (res) => {
@@ -93,7 +94,9 @@ export default function AgentCardPreviewPanel({
         <div className="mt-2 flex flex-wrap gap-1.5">
           {card.x402 && <Chip>x402</Chip>}
           {card.preferredTransport && <Chip>{card.preferredTransport}</Chip>}
-          {card.protocolVersion && <Chip>v{card.protocolVersion}</Chip>}
+          {card.protocolVersion && (
+            <Chip>{`v${card.protocolVersion}`}</Chip>
+          )}
           {card.provider && <Chip>{card.provider}</Chip>}
         </div>
         {card.endpoint && (

@@ -10,9 +10,8 @@ import {
   X402_PAYMENT_USDC,
   X402_PAY_TO,
 } from "@/app/lib/x402-usdc";
-import {
-  signExactUsdcPayment,
-} from "@/app/lib/x402-client";
+import { apiV1 } from "@/app/lib/api";
+import { signExactUsdcPayment } from "@/app/lib/x402-client";
 import type { AgentWork } from "@/app/lib/agent-work";
 import { newHireId, rememberHire } from "@/app/lib/hires-store";
 import FeedbackButton from "./FeedbackButton";
@@ -33,7 +32,7 @@ export default function PayUsdcButton({
   const [error, setError] = useState<string | null>(null);
   const [tx, setTx] = useState<string | null>(null);
   const [work, setWork] = useState<AgentWork | null>(null);
-  const [payToInput, setPayToInput] = useState(X402_PAY_TO);
+  const [payToInput, setPayToInput] = useState<string>(X402_PAY_TO);
 
   useEffect(() => {
     if (selectedPayTo) setPayToInput(selectedPayTo);
@@ -67,7 +66,7 @@ export default function PayUsdcButton({
       setStatus("signing");
       const body = await signExactUsdcPayment(walletClient, account, payTo);
       setStatus("settling");
-      const hire = await fetch("/api/agent/resource", {
+      const hire = await fetch(apiV1("/agent/resource"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

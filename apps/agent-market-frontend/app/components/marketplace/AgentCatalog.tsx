@@ -13,6 +13,7 @@ import {
 } from "@/app/lib/agents";
 import { demoMarketplaceAgents } from "@/app/lib/demo-agents";
 import { frontendBscChainId, frontendNetworkMode } from "@/app/lib/network";
+import { apiV1 } from "@/app/lib/api";
 import { X402_PAYMENT_USDC } from "@/app/lib/x402-usdc";
 import type { HeroStats } from "@/app/components/home/Hero";
 
@@ -57,7 +58,7 @@ export default function AgentCatalog({
 
   async function fetchCatalog(expandOpen: boolean) {
     const res = await fetch(
-      `/api/marketplace/agents?isTestnet=${isTestnet}&chainId=${chainId}&usable=true${
+      `${apiV1("/marketplace/agents")}?isTestnet=${isTestnet}&chainId=${chainId}&usable=true${
         expandOpen ? "&open=true" : ""
       }`,
       { cache: "no-store" },
@@ -83,7 +84,7 @@ export default function AgentCatalog({
       throw new Error(
         nested
           ? String(nested)
-          : `API ${res.status} — indexer en ${process.env.NEXT_PUBLIC_INDEXER_BNB_URL || "http://127.0.0.1:8085"}`,
+          : `API ${res.status} — Nest en ${process.env.NEXT_PUBLIC_API_URL || `http://${process.env.NEXT_PUBLIC_API_HOST || "127.0.0.1"}:${process.env.NEXT_PUBLIC_API_PORT || "3000"}`}`,
       );
     }
     const list = Array.isArray(payload)
@@ -169,7 +170,7 @@ export default function AgentCatalog({
     setChecking(agent.agentId);
     try {
       const res = await fetch(
-        `/api/marketplace/agents/${encodeURIComponent(agent.agentId)}/a2a-health`,
+        apiV1(`/marketplace/agents/${encodeURIComponent(agent.agentId)}/a2a-health`),
         { cache: "no-store" },
       );
       const json = (await res.json()) as A2aHealth;
@@ -198,7 +199,7 @@ export default function AgentCatalog({
     setLoadingEndpoint(agent.agentId);
     try {
       const res = await fetch(
-        `/api/marketplace/agents/${encodeURIComponent(agent.agentId)}`,
+        apiV1(`/marketplace/agents/${encodeURIComponent(agent.agentId)}`),
         { cache: "no-store" },
       );
       const json = (await res.json()) as MarketplaceAgent;

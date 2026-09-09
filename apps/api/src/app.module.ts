@@ -13,6 +13,7 @@ import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { HiringModule } from './modules/hiring/hiring.module';
 import { BlockchainModule } from './modules/blockchain/blockchain.module';
 import { UsersModule } from './modules/users/users.module';
+import { X402Module } from './modules/x402/x402.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { UsersModule } from './modules/users/users.module';
     HiringModule,
     BlockchainModule,
     UsersModule,
+    X402Module,
   ],
 })
 export class AppModule implements NestModule {

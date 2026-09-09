@@ -3,66 +3,57 @@ import { MarketplaceService } from '../src/modules/marketplace/marketplace.servi
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { AgentsService } from '../src/modules/agents/agents.service';
 import { AnalyticsPublicService } from '../src/modules/analytics/analytics-public.service';
-import { AgentVerificationService } from '../src/modules/blockchain/erc8004/agent-verification.service';
-import { mapScanListItemToMarketplaceAgent } from '../src/modules/blockchain/erc8004/erc8004-agent.mapper';
-import { Erc8004ScanClient } from '../src/modules/blockchain/erc8004/erc8004-scan.client';
+import { IndexerBnbService } from '../src/modules/blockchain/indexer-bnb/indexer-bnb.service';
 import { NetworkConfig } from '../src/common/network/network.config';
 import { AgentCategory, AgentSource, MarketplaceSort, RiskLevel } from '@bnb-marketplace/shared-types';
 
 describe('MarketplaceService', () => {
   let service: MarketplaceService;
-  let scan: {
-    listRegisteredAgents: jest.Mock;
-    enrichCatalogItems: jest.Mock;
-    getChains: jest.Mock;
-  };
-  let verification: { listCatalog: jest.Mock };
+  let indexer: { listAgents: jest.Mock; countRegistered: jest.Mock };
 
-  const scanItem = {
+  const catalogAgent = {
     id: 'scan-1',
-    agent_id: '56:0x8004:123',
-    token_id: '123',
-    chain_id: 56,
+    agentId: '56:0x8004:123',
     name: 'Test Agent',
     description: 'Venus yield optimisation agent',
-    owner_address: '0x1',
-    created_at: '2026-01-01T00:00:00.000Z',
-    updated_at: '2026-01-02T00:00:00.000Z',
-    is_testnet: false,
-    is_verified: true,
-    star_count: 5,
-    supported_protocols: ['Venus'],
-    x402_supported: false,
-    total_score: 10,
-    health_score: 80,
-    total_feedbacks: 3,
-    average_score: 4,
-    rank: 1,
+    shortDescription: 'Venus yield optimisation agent',
+    slug: 'test-agent-123',
+    ownerWallet: '0x1',
+    agentWallet: '0x1',
+    agentUri: null,
+    imageUrl: null,
+    network: 'BSC',
+    chainId: 56,
+    isTestnet: false,
+    source: AgentSource.ERC8004,
+    publishedAt: '2026-01-01T00:00:00.000Z',
+    status: 'LISTED',
+    verified: false,
+    category: AgentCategory.YIELD_OPTIMISATION,
+    protocols: ['ERC-8004', 'Venus'],
+    supportedAssets: [],
+    strategyName: 'Test Agent',
+    strategyDescription: 'Venus yield optimisation agent',
+    riskLevel: RiskLevel.MEDIUM,
+    minimumCapital: 0,
+    recommendedCapital: 0,
+    executionFrequency: 'On demand',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
   };
 
-  const catalogAgent = mapScanListItemToMarketplaceAgent(scanItem, {
-    chainId: 56,
-    name: 'BNB Chain',
-    chainKey: 'bsc_mainnet',
-    isTestnet: false,
-  });
-
   beforeEach(async () => {
-    scan = {
-      listRegisteredAgents: jest.fn().mockResolvedValue({ items: [scanItem], total: 1 }),
-      enrichCatalogItems: jest.fn(async (items) => items),
-      getChains: jest.fn().mockResolvedValue([
-        {
-          chain_id: 56,
-          name: 'BNB Chain',
-          chain_key: 'bsc_mainnet',
-          is_testnet: false,
-          enabled: true,
-        },
-      ]),
-    };
-    verification = {
-      listCatalog: jest.fn().mockResolvedValue({ data: [catalogAgent], total: 1 }),
+    indexer = {
+      listAgents: jest.fn().mockResolvedValue({
+        data: [catalogAgent],
+        total: 1,
+        page: 1,
+        limit: 100,
+        registered: 1,
+        consumable: 1,
+        filteredOut: 0,
+      }),
+      countRegistered: jest.fn().mockResolvedValue(1),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -81,8 +72,7 @@ describe('MarketplaceService', () => {
             },
           },
         },
-        { provide: Erc8004ScanClient, useValue: scan },
-        { provide: AgentVerificationService, useValue: verification },
+        { provide: IndexerBnbService, useValue: indexer },
         {
           provide: NetworkConfig,
           useValue: { mode: 'mainnet', isTestnet: false, chainId: 56 },
@@ -97,28 +87,28 @@ describe('MarketplaceService', () => {
     service = module.get(MarketplaceService);
   });
 
-  it('should filter by category from verified catalog', async () => {
+  it('should filter by category from indexer catalog', async () => {
     const result = await service.listAgents({ category: AgentCategory.YIELD_OPTIMISATION });
 
-    expect(verification.listCatalog).toHaveBeenCalled();
+    expect(indexer.listAgents).toHaveBeenCalled();
     expect(result.data.every((agent) => agent.category === AgentCategory.YIELD_OPTIMISATION)).toBe(
       true,
     );
   });
 
-  it('should filter by protocol from verified catalog', async () => {
+  it('should filter by protocol from indexer catalog', async () => {
     const result = await service.listAgents({ protocol: 'Venus' });
 
     expect(result.data.every((agent) => agent.protocols.includes('Venus'))).toBe(true);
   });
 
-  it('should filter by risk level from verified catalog', async () => {
+  it('should filter by risk level from indexer catalog', async () => {
     const result = await service.listAgents({ riskLevel: RiskLevel.MEDIUM });
 
     expect(result.data.every((agent) => agent.riskLevel === RiskLevel.MEDIUM)).toBe(true);
   });
 
-  it('should return ERC8004 agents from verified catalog', async () => {
+  it('should return ERC8004 agents from indexer catalog', async () => {
     const result = await service.listAgents({ source: AgentSource.ERC8004 });
 
     expect(result.data[0].source).toBe(AgentSource.ERC8004);
@@ -126,20 +116,13 @@ describe('MarketplaceService', () => {
   });
 
   it('should sort by highest return', async () => {
-    const secondItem = {
-      ...scanItem,
-      id: 'scan-2',
-      agent_id: '56:0x8004:124',
-      token_id: '124',
-      name: 'Second Agent',
-    };
-    const second = mapScanListItemToMarketplaceAgent(secondItem, {
-      chainId: 56,
-      name: 'BNB Chain',
-      chainKey: 'bsc_mainnet',
-      isTestnet: false,
+    const second = { ...catalogAgent, id: 'scan-2', agentId: '56:0x8004:124', name: 'Second Agent' };
+    indexer.listAgents.mockResolvedValue({
+      data: [catalogAgent, second],
+      total: 2,
+      page: 1,
+      limit: 100,
     });
-    verification.listCatalog.mockResolvedValue({ data: [catalogAgent, second], total: 2 });
 
     const result = await service.listAgents({ sort: MarketplaceSort.HIGHEST_RETURN });
 
@@ -151,13 +134,15 @@ describe('MarketplaceService', () => {
     expect(categories.length).toBe(4);
   });
 
-  it('should fetch featured agents from verified catalog', async () => {
+  it('should fetch featured agents from indexer', async () => {
     const featured = await service.getFeatured(10);
 
-    expect(verification.listCatalog).toHaveBeenCalledWith({
-      isTestnet: false,
+    expect(indexer.listAgents).toHaveBeenCalledWith({
+      usable: true,
       limit: 10,
-      offset: 0,
+      page: 1,
+      chainId: 56,
+      isTestnet: false,
     });
     expect(featured.length).toBe(1);
   });
@@ -165,28 +150,26 @@ describe('MarketplaceService', () => {
   it('should list agents for the configured network', async () => {
     await service.listAgents({});
 
-    expect(verification.listCatalog).toHaveBeenCalledWith({
-      isTestnet: false,
-      limit: 100,
-      offset: 0,
-    });
+    const callArg = indexer.listAgents.mock.calls[0]?.[0] as
+      | { page?: number; limit?: number; chainId?: number; isTestnet?: boolean }
+      | undefined;
+    expect(callArg?.page).toBe(1);
+    expect(callArg?.limit).toBe(100);
+    expect(callArg?.chainId).toBe(56);
+    expect(callArg?.isTestnet).toBe(false);
   });
 
-  it('should expand open 8004scan catalog when open=true', async () => {
+  it('should expand open indexer catalog when open=true', async () => {
     await service.listAgents({ open: true });
 
-    expect(verification.listCatalog).toHaveBeenCalledWith({
-      isTestnet: false,
-      limit: 100,
-      offset: 0,
-      expandOpen: true,
-    });
+    const callArg = indexer.listAgents.mock.calls[0]?.[0] as { open?: boolean } | undefined;
+    expect(callArg?.open).toBe(true);
   });
 
-  it('should skip verification pipeline when usable=false', async () => {
+  it('should request raw indexer dump when usable=false', async () => {
     await service.listAgents({ usable: false });
 
-    expect(scan.listRegisteredAgents).toHaveBeenCalled();
-    expect(verification.listCatalog).not.toHaveBeenCalled();
+    const callArg = indexer.listAgents.mock.calls[0]?.[0] as { usable?: boolean } | undefined;
+    expect(callArg?.usable).toBe(false);
   });
 });

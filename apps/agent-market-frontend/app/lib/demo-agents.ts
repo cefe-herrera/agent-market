@@ -1,3 +1,4 @@
+import { apiV1 } from "@/app/lib/api";
 import { X402_PAY_TO } from "@/app/lib/x402-usdc";
 import type { MarketplaceAgent } from "@/app/lib/agents";
 
@@ -109,7 +110,7 @@ export function demoMarketplaceAgents(): MarketplaceAgent[] {
     shortDescription: seller.shortDescription,
     ownerWallet: X402_PAY_TO,
     agentWallet: X402_PAY_TO,
-    agentUri: `/api/agent/resource?seller=${seller.agentId}`,
+    agentUri: `${apiV1("/agent/resource")}?seller=${seller.agentId}`,
     network: "BSC Testnet",
     chainId: 97,
     isTestnet: true,

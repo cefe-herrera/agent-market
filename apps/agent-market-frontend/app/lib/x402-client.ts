@@ -1,4 +1,5 @@
 import { getAddress, toHex, type Address, type Hex, type WalletClient } from "viem";
+import { apiV1 } from "@/app/lib/api";
 import {
   USDC_EIP712,
   X402_AMOUNT_ATOMIC,
@@ -106,7 +107,7 @@ export type X402SettleResult = {
 export async function settleExactUsdcPayment(
   body: Awaited<ReturnType<typeof signExactUsdcPayment>>,
 ): Promise<X402SettleResult> {
-  const res = await fetch("/api/x402/settle", {
+  const res = await fetch(apiV1("/x402/settle"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

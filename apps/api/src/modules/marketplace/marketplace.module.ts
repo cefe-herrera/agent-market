@@ -4,11 +4,13 @@ import { MarketplaceController } from './marketplace.controller';
 import { AgentsModule } from '../agents/agents.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { BlockchainModule } from '../blockchain/blockchain.module';
+import { MarketplaceV1Controller } from './marketplace-v1.controller';
+import { AgentCardPreviewService } from './agent-card-preview.service';
 
 @Module({
   imports: [AgentsModule, AnalyticsModule, BlockchainModule],
-  controllers: [MarketplaceController],
-  providers: [MarketplaceService],
+  controllers: [MarketplaceController, MarketplaceV1Controller],
+  providers: [MarketplaceService, AgentCardPreviewService],
   exports: [MarketplaceService],
 })
 export class MarketplaceModule {}

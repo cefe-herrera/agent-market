@@ -58,7 +58,7 @@ export class MarketplaceQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Default true: verification pipeline (registered → schema-valid → live). Schema fail = excluded. false = raw 8004scan dump.',
+      'Default true: consumible catalog (schema-valid A2A/MCP). false = raw indexer dump.',
   })
   @IsOptional()
   @Transform(({ value }) => {
@@ -71,7 +71,7 @@ export class MarketplaceQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'When true with usable catalog, scan 8004scan A2A/x402 agents (not only BNB Agent SDK) and merge schema-valid ones.',
+      'When true with usable catalog, expand indexer search for A2A/x402 agents beyond BNB Agent SDK.',
   })
   @IsOptional()
   @Transform(({ value }) => {

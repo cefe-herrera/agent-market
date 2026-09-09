@@ -3,22 +3,19 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AGENT_REGISTRY_PROVIDER } from './interfaces/agent-registry.provider';
 import { MockAgentRegistryProvider } from './providers/mock-agent-registry.provider';
 import { Erc8004RegistryProvider } from './providers/erc8004-registry.provider';
-import { Erc8004ScanClient } from './erc8004/erc8004-scan.client';
 import { Erc8004AgentResolver } from './erc8004/erc8004-agent.resolver';
-import { Erc8004ReputationClient } from './erc8004/erc8004-reputation.client';
 import { A2aHealthClient } from './erc8004/a2a-health.client';
-import { AgentVerificationService } from './erc8004/agent-verification.service';
-import { AgentVerificationScheduler } from './erc8004/agent-verification.scheduler';
+import { IndexerBnbClient } from './indexer-bnb/indexer-bnb.client';
+import { IndexerBnbService } from './indexer-bnb/indexer-bnb.service';
+import { NetworkModule } from '../../common/network/network.module';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, NetworkModule],
   providers: [
-    Erc8004ScanClient,
+    IndexerBnbClient,
+    IndexerBnbService,
     Erc8004AgentResolver,
-    Erc8004ReputationClient,
     A2aHealthClient,
-    AgentVerificationService,
-    AgentVerificationScheduler,
     MockAgentRegistryProvider,
     Erc8004RegistryProvider,
     {
@@ -38,11 +35,10 @@ import { AgentVerificationScheduler } from './erc8004/agent-verification.schedul
     AGENT_REGISTRY_PROVIDER,
     MockAgentRegistryProvider,
     Erc8004RegistryProvider,
-    Erc8004ScanClient,
+    IndexerBnbService,
+    IndexerBnbClient,
     Erc8004AgentResolver,
-    Erc8004ReputationClient,
     A2aHealthClient,
-    AgentVerificationService,
   ],
 })
 export class BlockchainModule {}

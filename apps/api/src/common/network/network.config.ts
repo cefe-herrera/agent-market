@@ -13,6 +13,6 @@ export class NetworkConfig {
     this.mode = parseNetworkMode(config.get<string>('NETWORK'));
     this.isTestnet = this.mode === 'testnet';
     this.chainId = bscChainId(this.mode);
-    this.logger.log(`8004scan network: ${this.mode} (BSC ${this.chainId})`);
+    this.logger.log(`BNB indexer network: ${this.mode} (BSC ${this.chainId})`);
   }
 }

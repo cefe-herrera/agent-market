@@ -4,6 +4,7 @@ import { useState } from "react";
 import { zeroHash } from "viem";
 import { useReadContract, useWriteContract } from "wagmi";
 import { useWalletReady } from "@/app/context/hooks/useWalletReady";
+import { apiV1 } from "@/app/lib/api";
 import {
   BSC_TESTNET_CHAIN_ID,
   IDENTITY_REGISTRY,
@@ -59,7 +60,7 @@ export default function FeedbackButton({
           0,
           "x402",
           "quality",
-          `${window.location.origin}/api/agent/resource?seller=${encodeURIComponent(agentId)}`,
+          `${apiV1("/agent/resource")}?seller=${encodeURIComponent(agentId)}`,
           "",
           zeroHash,
         ],
