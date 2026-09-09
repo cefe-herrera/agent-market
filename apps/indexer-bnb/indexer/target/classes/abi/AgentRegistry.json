@@ -1,0 +1,43 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "name": "agentId", "type": "uint256" },
+      { "indexed": false, "name": "agentURI", "type": "string" },
+      { "indexed": true, "name": "owner", "type": "address" }
+    ],
+    "name": "Registered",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "name": "agentId", "type": "uint256" },
+      { "indexed": false, "name": "newURI", "type": "string" },
+      { "indexed": true, "name": "updatedBy", "type": "address" }
+    ],
+    "name": "URIUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "name": "from", "type": "address" },
+      { "indexed": true, "name": "to", "type": "address" },
+      { "indexed": true, "name": "tokenId", "type": "uint256" }
+    ],
+    "name": "Transfer",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "name": "agentId", "type": "uint256" },
+      { "indexed": true, "name": "indexedMetadataKey", "type": "string" },
+      { "indexed": false, "name": "metadataKey", "type": "string" },
+      { "indexed": false, "name": "metadataValue", "type": "bytes" }
+    ],
+    "name": "MetadataSet",
+    "type": "event"
+  }
+]

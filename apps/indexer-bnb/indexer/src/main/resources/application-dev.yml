@@ -1,0 +1,44 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+
+# BSC mainnet. Swapping networks means changing chain-id, registry-address and start-block
+# together — see local.properties.example for the testnet triplet.
+blockchain:
+  chain-id: 56
+  registry-address: "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
+  reputation-registry-address: "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63"
+  # CREATE2 address — not deployed on BSC mainnet yet; leave empty ("") until live.
+  validation-registry-address: "0x8004Cb1BF31DAf7788923b405b754f57acEB4272"
+  start-block: 118855138
+  reputation-start-block: 0
+  validation-start-block: 0
+  rpc-url: ${BLOCKCHAIN_RPC_URL}
+  batch-size: 10000
+  max-log-range: 10000
+  poll-interval-ms: 1000
+  verify-blocks: false
+
+resilience4j:
+  timelimiter:
+    instances:
+      blockchain:
+        timeout-duration: 60s
+  circuitbreaker:
+    instances:
+      blockchain:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s

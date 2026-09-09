@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: indexer
+  profiles:
+    active: dev
+  # Local, git-ignored secrets. Both paths are optional so the app still boots from plain
+  # environment variables (CI, prod) when the file is absent. Env vars win over the file.
+  config:
+    import:
+      - optional:file:./local.properties
+      - optional:file:./indexer/local.properties
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,modulith
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Environment-agnostic tuning only. Chain identity (rpc-url, chain-id, registry-address,
+# start-block) is per-environment and belongs in application-<profile>.yml, so that a missing
+# profile fails loudly instead of silently indexing the zero address from block 0.
+blockchain:
+  batch-size: 1000
+  max-log-range: 2000
+  poll-interval-ms: 3000
+  confirmation-blocks: 12
+  verify-blocks: true
+
+metadata:
+  ipfs-gateway: ${IPFS_GATEWAY:https://ipfs.io/ipfs/}
+  fetch-timeout-seconds: 30
+  max-retries: 5
+  retry-initial-delay-seconds: 30
+  retry-max-delay-seconds: 3600
+  retry-poll-interval-ms: 60000
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  show-actuator: false

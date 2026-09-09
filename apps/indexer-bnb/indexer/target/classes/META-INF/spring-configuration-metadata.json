@@ -1,0 +1,129 @@
+{
+  "groups": [
+    {
+      "name": "blockchain",
+      "type": "agora3.indexer.blockchain.BlockchainProperties",
+      "sourceType": "agora3.indexer.blockchain.BlockchainProperties"
+    },
+    {
+      "name": "metadata",
+      "type": "agora3.indexer.metadata.MetadataProperties",
+      "sourceType": "agora3.indexer.metadata.MetadataProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "blockchain.batch-size",
+      "type": "java.lang.Integer",
+      "sourceType": "agora3.indexer.blockchain.BlockchainProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "blockchain.chain-id",
+      "type": "java.lang.Long",
+      "sourceType": "agora3.indexer.blockchain.BlockchainProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "blockchain.confirmation-blocks",
+      "type": "java.lang.Integer",
+      "sourceType": "agora3.indexer.blockchain.BlockchainProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "blockchain.max-log-range",
+      "type": "java.lang.Integer",
+      "sourceType": "agora3.indexer.blockchain.BlockchainProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "blockchain.poll-interval-ms",
+      "type": "java.lang.Long",
+      "sourceType": "agora3.indexer.blockchain.BlockchainProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "blockchain.registry-address",
+      "type": "java.lang.String",
+      "sourceType": "agora3.indexer.blockchain.BlockchainProperties"
+    },
+    {
+      "name": "blockchain.reputation-registry-address",
+      "type": "java.lang.String",
+      "sourceType": "agora3.indexer.blockchain.BlockchainProperties"
+    },
+    {
+      "name": "blockchain.reputation-start-block",
+      "type": "java.lang.Long",
+      "sourceType": "agora3.indexer.blockchain.BlockchainProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "blockchain.rpc-url",
+      "type": "java.lang.String",
+      "sourceType": "agora3.indexer.blockchain.BlockchainProperties"
+    },
+    {
+      "name": "blockchain.start-block",
+      "type": "java.lang.Long",
+      "sourceType": "agora3.indexer.blockchain.BlockchainProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "blockchain.validation-registry-address",
+      "type": "java.lang.String",
+      "sourceType": "agora3.indexer.blockchain.BlockchainProperties"
+    },
+    {
+      "name": "blockchain.validation-start-block",
+      "type": "java.lang.Long",
+      "sourceType": "agora3.indexer.blockchain.BlockchainProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "blockchain.verify-blocks",
+      "type": "java.lang.Boolean",
+      "sourceType": "agora3.indexer.blockchain.BlockchainProperties",
+      "defaultValue": false
+    },
+    {
+      "name": "metadata.fetch-timeout-seconds",
+      "type": "java.lang.Integer",
+      "sourceType": "agora3.indexer.metadata.MetadataProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "metadata.ipfs-gateway",
+      "type": "java.lang.String",
+      "sourceType": "agora3.indexer.metadata.MetadataProperties"
+    },
+    {
+      "name": "metadata.max-retries",
+      "type": "java.lang.Integer",
+      "sourceType": "agora3.indexer.metadata.MetadataProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "metadata.retry-initial-delay-seconds",
+      "type": "java.lang.Integer",
+      "sourceType": "agora3.indexer.metadata.MetadataProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "metadata.retry-max-delay-seconds",
+      "type": "java.lang.Integer",
+      "sourceType": "agora3.indexer.metadata.MetadataProperties",
+      "defaultValue": 0
+    },
+    {
+      "name": "metadata.retry-poll-interval-ms",
+      "type": "java.lang.Long",
+      "sourceType": "agora3.indexer.metadata.MetadataProperties",
+      "defaultValue": 0
+    }
+  ],
+  "hints": [],
+  "ignored": {
+    "properties": []
+  }
+}

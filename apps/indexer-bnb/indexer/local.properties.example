@@ -1,0 +1,18 @@
+# Template for local.properties. Copy it, fill in real values, and never commit the copy.
+#   cp local.properties.example local.properties
+
+# --- Neon PostgreSQL ---
+DB_URL=jdbc:postgresql://<host>/neondb?sslmode=require&channel_binding=require
+DB_USERNAME=<user>
+DB_PASSWORD=<password>
+
+# --- JSON-RPC endpoint, including the API key ---
+# BSC mainnet:
+#   identity    0x8004A169FB4a3325136EB29fA0ceB6D2e539a432
+#   reputation  0x8004BAa17C55a88189AE136b182e5fdA19dE9b63
+#   validation  0x8004Cb1BF31DAf7788923b405b754f57acEB4272  (not deployed on mainnet yet)
+# BSC testnet:
+#   identity    0x8004A818BFB912233c491871b3d84c89A494BD9e
+#   reputation  0x8004B663056A597Dffe9eCcC1965A193B7388713
+#   validation  0x8004Cb1BF31DAf7788923b405b754f57acEB4272
+BLOCKCHAIN_RPC_URL=https://bnb-mainnet.g.alchemy.com/v2/<api-key>
