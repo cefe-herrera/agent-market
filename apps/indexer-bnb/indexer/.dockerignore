@@ -12,5 +12,5 @@ docs/
 .git/
 .gitignore
 *.md
-Dockerfile*
 .dockerignore
+Dockerfile.vercel

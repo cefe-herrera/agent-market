@@ -1,5 +1,5 @@
-# Vercel container deploy for the ERC-8004 indexer (Spring Boot / Java 21).
-# Set the Vercel project root to: apps/indexer-bnb/indexer
+# ERC-8004 indexer (Spring Boot / Java 21) — Coolify / Docker
+# Coolify: Base Directory = apps/indexer-bnb/indexer
 
 FROM eclipse-temurin:21-jdk-jammy AS builder
 
@@ -8,8 +8,6 @@ WORKDIR /app
 COPY mvnw mvnw.cmd ./
 COPY .mvn .mvn
 COPY pom.xml ./
-
-
 
 RUN chmod +x mvnw \
  && ./mvnw -B -DskipTests dependency:go-offline
@@ -36,5 +34,4 @@ ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
 
 EXPOSE 8080
 
-# Vercel routes traffic to $PORT (default 80). Bind on all interfaces.
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/indexer.jar --server.address=0.0.0.0 --server.port=${PORT:-8080}"]
