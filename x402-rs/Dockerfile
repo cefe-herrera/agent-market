@@ -1,30 +1,24 @@
-FROM --platform=$BUILDPLATFORM rust:trixie AS builder
+# Coolify / production deploy — uses upstream GHCR image + BSC config from this repo.
+# Build arg NETWORK: mainnet (default) | testnet
+#
+# Coolify:
+#   Base Directory = x402-rs
+#   Dockerfile     = Dockerfile
+#   Build Arg      = NETWORK=mainnet
+#   Ports Exposes  = 8080
+#   Health Check   = /health
 
-ENV PORT=8080
-
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    pkg-config \
-    libssl-dev \
- && rm -rf /var/lib/apt/lists/*
-
-COPY . ./
-RUN cargo build --package x402-facilitator --features full --release --locked
-
-# --- Stage 2 ---
-FROM --platform=$BUILDPLATFORM debian:trixie-slim
-
-ENV PORT=8080
-
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+FROM ghcr.io/x402-rs/x402-facilitator:latest
 
 WORKDIR /app
 
-COPY --from=builder /app/target/release/x402-facilitator /usr/local/bin/x402-facilitator
+ARG NETWORK=mainnet
+COPY config.${NETWORK}.json ./config.json
 
-EXPOSE $PORT
+ENV HOST=0.0.0.0
+ENV PORT=8080
 ENV RUST_LOG=info
 
-ENTRYPOINT ["x402-facilitator"]
+EXPOSE 8080
+
+ENTRYPOINT ["x402-facilitator", "--config", "/app/config.json"]
