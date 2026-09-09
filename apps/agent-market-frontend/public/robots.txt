@@ -1,0 +1,21 @@
+# Crawlers and agents are welcome. Human UI is secondary.
+# Machine index: /llms.txt  Agent Card: /.well-known/agent-card.json
+
+User-agent: *
+Allow: /
+Allow: /.well-known/
+Allow: /api/agent/
+Allow: /api/marketplace/
+Allow: /llms.txt
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /

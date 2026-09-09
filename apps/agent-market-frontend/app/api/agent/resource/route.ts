@@ -1,9 +1,15 @@
-import { NextResponse } from "next/server";
-import { getAddress } from "viem";
+import { getAddress, isAddress } from "viem";
 import { X402_NETWORK, usdcExactRequirements } from "@/app/lib/x402-usdc";
 import { getDemoSeller } from "@/app/lib/demo-agents";
 import { geminiAgentName, isGeminiAgentId } from "@/app/lib/gemini/catalog";
+import { geminiAgentKind } from "@/app/lib/gemini/ids";
+import { getPublicMerchant } from "@/app/lib/merchant/server-store";
 import { resolvePaidWork } from "@/app/lib/agent-work";
+import {
+  agentDiscoveryJson,
+  agentDiscoveryOptions,
+  requestOrigin,
+} from "@/app/lib/agent-discovery";
 
 const FACILITATOR_URL = (
   process.env.FACILITATOR_URL ?? "http://127.0.0.1:8080"
@@ -11,9 +17,12 @@ const FACILITATOR_URL = (
 
 function paymentRequired(url: string, sellerId?: string | null) {
   const demo = getDemoSeller(sellerId);
+  const merchant = sellerId ? getPublicMerchant(sellerId) : null;
   const gemini = isGeminiAgentId(sellerId);
-  const name = demo?.name ?? geminiAgentName(sellerId);
-  const accepts = [usdcExactRequirements()];
+  const name = demo?.name ?? merchant?.name ?? geminiAgentName(sellerId);
+  const payTo =
+    merchant?.payTo && isAddress(merchant.payTo) ? merchant.payTo : undefined;
+  const accepts = [usdcExactRequirements(payTo)];
   return {
     x402Version: 2,
     error: `PAYMENT-SIGNATURE required — exact $U EIP-3009 on ${X402_NETWORK}`,
@@ -25,7 +34,13 @@ function paymentRequired(url: string, sellerId?: string | null) {
       mimeType: "application/json",
       serviceName: demo?.agentId ?? sellerId ?? "LatamMarketPay",
       tags: gemini
-        ? ["x402", "gemini", "yield", "bnb"]
+        ? geminiAgentKind(sellerId) === "health"
+          ? ["x402", "gemini", "health", "venus", "coingecko", "bnb"]
+          : geminiAgentKind(sellerId) === "grid"
+            ? ["x402", "gemini", "grid", "aster", "coingecko", "bnb"]
+            : geminiAgentKind(sellerId) === "rebalance"
+              ? ["x402", "gemini", "rebalance", "coingecko", "bnb"]
+              : ["x402", "gemini", "yield", "bnb"]
         : ["x402", "erc8004", "bnb"],
     },
     accepts,
@@ -72,24 +87,30 @@ function paymentAddresses(body: unknown): { payer?: string; payTo?: string } {
   };
 }
 
+export function OPTIONS(request: Request) {
+  return agentDiscoveryOptions(requestOrigin(request));
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  return NextResponse.json(
+  const origin = requestOrigin(request);
+  return agentDiscoveryJson(
     paymentRequired(url.toString(), url.searchParams.get("seller")),
-    { status: 402 },
+    { status: 402, origin },
   );
 }
 
 export async function POST(request: Request) {
   const agentId = request.headers.get("x-agent-id");
   const agentName = request.headers.get("x-agent-name");
+  const origin = requestOrigin(request);
   if (!agentId) {
-    return NextResponse.json(
+    return agentDiscoveryJson(
       {
         success: false,
         error: "Elegí un agente del catálogo (demo o indexador).",
       },
-      { status: 400 },
+      { status: 400, origin },
     );
   }
 
@@ -107,13 +128,13 @@ export async function POST(request: Request) {
     typeof sentAsset === "string" &&
     getAddress(sentAsset) !== expected.asset
   ) {
-    return NextResponse.json(
+    return agentDiscoveryJson(
       {
         success: false,
         error: `x402 asset mismatch: client sent ${sentAsset} but ${expected.network} $U is ${expected.asset}. Reiniciá Next (npm run dev:mainnet) y volvé a firmar.`,
         details: { sentAsset, expected: expected.asset, network: expected.network },
       },
-      { status: 402 },
+      { status: 402, origin },
     );
   }
 
@@ -121,13 +142,13 @@ export async function POST(request: Request) {
   const verifyJson = verified.json as { isValid?: boolean; payer?: string };
 
   if (!verified.ok || verifyJson?.isValid === false) {
-    return NextResponse.json(
+    return agentDiscoveryJson(
       {
         success: false,
         error: "x402 verify failed",
         details: verified.json ?? verified.text,
       },
-      { status: 402 },
+      { status: 402, origin },
     );
   }
 
@@ -140,13 +161,13 @@ export async function POST(request: Request) {
   };
 
   if (!settled.ok || settleJson.success === false) {
-    return NextResponse.json(
+    return agentDiscoveryJson(
       {
         success: false,
         error: "x402 settle failed",
         details: settled.json ?? settled.text,
       },
-      { status: 402 },
+      { status: 402, origin },
     );
   }
 
@@ -159,12 +180,15 @@ export async function POST(request: Request) {
     settleTx: settleJson.transaction,
   });
 
-  return NextResponse.json({
-    success: true,
-    transaction: settleJson.transaction,
-    payer: settleJson.payer ?? verifyJson.payer ?? payer,
-    network: settleJson.network,
-    agentId,
-    work,
-  });
+  return agentDiscoveryJson(
+    {
+      success: true,
+      transaction: settleJson.transaction,
+      payer: settleJson.payer ?? verifyJson.payer ?? payer,
+      network: settleJson.network,
+      agentId,
+      work,
+    },
+    { origin },
+  );
 }

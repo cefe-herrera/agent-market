@@ -1,19 +1,21 @@
 import { NextRequest } from "next/server";
 import {
   IndexerHttpError,
-  indexerAgentHealth,
   indexerAgentReputation,
   indexerOrigin,
   listIndexerAgents,
   marketplaceListFilters,
   resolveIndexerAgent,
 } from "@/app/lib/indexer-bnb";
+import { probeAgentA2a } from "@/app/lib/a2a-probe";
 import { fetchAgentCardPreview } from "@/app/lib/agent-card";
 import {
   getPublicMerchant,
   listPublicMerchants,
 } from "@/app/lib/merchant/server-store";
 import { merchantCardFromListing } from "@/app/lib/merchant/card";
+import { geminiAgentCardPreview } from "@/app/lib/gemini/agent-card";
+import { isGeminiAgentId, isYieldAgentId } from "@/app/lib/gemini/ids";
 import {
   merchantToCatalogAgent,
   mergeCatalogWithMerchants,
@@ -23,10 +25,20 @@ export const maxDuration = 120;
 
 type RouteCtx = { params: Promise<{ path: string[] }> };
 
+function requestOrigin(req: NextRequest): string {
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const proto = req.headers.get("x-forwarded-proto") ?? "http";
+  return host ? `${proto}://${host}` : "";
+}
+
 export async function GET(req: NextRequest, ctx: RouteCtx) {
   const { path } = await ctx.params;
+  if (path[0] === "agents" && path[1] && path[2] === "a2a-health") {
+    const health = await probeAgentA2a(path[1], requestOrigin(req));
+    return Response.json(health);
+  }
   try {
-    return await handle(path, req.nextUrl.search);
+    return await handle(path, req.nextUrl.search, requestOrigin(req));
   } catch (err) {
     if (err instanceof IndexerHttpError) {
       return Response.json(
@@ -44,7 +56,11 @@ export async function GET(req: NextRequest, ctx: RouteCtx) {
   }
 }
 
-async function handle(path: string[], search: string): Promise<Response> {
+async function handle(
+  path: string[],
+  search: string,
+  origin = "",
+): Promise<Response> {
   const filters = marketplaceListFilters(search);
 
   if (path.length === 1 && path[0] === "agents") {
@@ -89,6 +105,19 @@ async function handle(path: string[], search: string): Promise<Response> {
   if (path[0] === "agents" && path[1]) {
     const id = path[1];
     if (path[2] === "card") {
+      if (isGeminiAgentId(id)) {
+        const merchant = getPublicMerchant(id);
+        const preview = geminiAgentCardPreview(id, origin, {
+          tokenId: isYieldAgentId(id)
+            ? process.env.NEXT_PUBLIC_YIELD_8004_TOKEN_ID?.trim() ||
+              merchant?.tokenId
+            : merchant?.tokenId,
+          owner: merchant?.owner,
+          payTo: merchant?.payTo,
+          provider8183: merchant?.provider8183,
+        });
+        if (preview) return Response.json(preview);
+      }
       const merchant = getPublicMerchant(id);
       if (merchant) {
         const card = merchantCardFromListing(merchant, merchant.a2a);
@@ -116,10 +145,6 @@ async function handle(path: string[], search: string): Promise<Response> {
         );
       }
       return Response.json(card);
-    }
-    if (path[2] === "a2a-health") {
-      const health = await indexerAgentHealth(id);
-      return Response.json(health);
     }
     if (path[2] === "reputation") {
       const reputation = await indexerAgentReputation(id);

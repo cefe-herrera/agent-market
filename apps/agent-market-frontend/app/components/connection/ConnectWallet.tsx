@@ -49,13 +49,13 @@ export default function ConnectWallet() {
   const formattedUsdc = usdcError
     ? "err"
     : usdcBalance !== undefined
-      ? formatUsdc(usdcBalance)
+      ? Number(formatUsdc(usdcBalance)).toFixed(2)
       : "…";
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex shrink-0 items-center gap-2">
       {account && (
-        <p className="hidden font-mono-data text-[10px] text-surface-500 lg:block">
+        <p className="hidden whitespace-nowrap font-mono-data text-[10px] text-surface-500 xl:block">
           {formattedBnb} BNB · {formattedUsdc} $U
         </p>
       )}
@@ -66,7 +66,7 @@ export default function ConnectWallet() {
             return (
               <button
                 type="button"
-                className="btn-primary !px-3 !py-1.5 text-xs"
+                className="btn-primary whitespace-nowrap !px-3 !py-1.5 text-xs"
                 onClick={openConnectModal}
               >
                 {t("wallet.connect")}
@@ -76,7 +76,7 @@ export default function ConnectWallet() {
           return (
             <button
               type="button"
-              className="btn-secondary !px-3 !py-1.5 text-xs"
+              className="btn-secondary whitespace-nowrap !px-3 !py-1.5 text-xs"
               onClick={openAccountModal}
             >
               {rkAccount.displayName}

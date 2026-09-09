@@ -1,5 +1,7 @@
 import { getAddress, type Address } from "viem";
 import { frontendBscChainId } from "@/app/lib/network";
+import { YIELD_SKILLS } from "@/app/lib/gemini/skills";
+import { YIELD_AGENT_ID } from "@/app/lib/gemini/ids";
 import { x402PaymentConfig } from "@/app/lib/x402-usdc";
 import type { PublicMerchant } from "./types";
 
@@ -8,17 +10,35 @@ export function buildMerchantCard(input: {
   description: string;
   owner: Address;
   payTo: Address;
-  provider8183: Address;
-  sessionAddress: Address;
+  provider8183?: Address | null;
+  sessionAddress?: Address | null;
   a2a?: string | null;
   chainId?: number;
   tokenId?: string | null;
   registry?: Address | null;
   resourceUrl?: string | null;
+  catalogId?: string | null;
+  category?: string | null;
 }): Record<string, unknown> {
   const x402 = x402PaymentConfig();
   const chainId = input.chainId ?? frontendBscChainId();
   const a2a = input.a2a?.trim() || input.resourceUrl || "";
+  const yieldLike = input.catalogId === YIELD_AGENT_ID;
+  const skills = yieldLike
+    ? YIELD_SKILLS.map((skill) => ({
+        id: skill.id,
+        name: skill.name,
+        description: skill.description,
+        tags: skill.tags,
+      }))
+    : [
+        {
+          id: "hire",
+          name: "Marketplace hire",
+          description: input.description,
+          tags: ["x402", "erc-8183"],
+        },
+      ];
   return {
     type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
     name: input.name,
@@ -28,14 +48,7 @@ export function buildMerchantCard(input: {
     url: a2a || undefined,
     owner: getAddress(input.owner),
     capabilities: { x402: true },
-    skills: [
-      {
-        id: "hire",
-        name: "Marketplace hire",
-        description: input.description,
-        tags: ["x402", "erc-8183"],
-      },
-    ],
+    skills,
     services: [
       ...(a2a
         ? [
@@ -51,11 +64,19 @@ export function buildMerchantCard(input: {
       payTo: getAddress(input.payTo),
       scheme: "exact",
     },
-    erc8183: {
-      provider: getAddress(input.provider8183),
-      chainId,
-      session: getAddress(input.sessionAddress),
-    },
+    ...(input.provider8183
+      ? {
+          erc8183: {
+            provider: getAddress(input.provider8183),
+            chainId,
+            ...(input.sessionAddress
+              ? { session: getAddress(input.sessionAddress) }
+              : {}),
+          },
+        }
+      : {}),
+    ...(input.category ? { category: input.category } : {}),
+    ...(input.catalogId ? { agentId: input.catalogId } : {}),
     registrations:
       input.tokenId && input.registry
         ? [
@@ -87,5 +108,6 @@ export function merchantCardFromListing(
     chainId: listing.chainId,
     tokenId: listing.tokenId,
     resourceUrl,
+    catalogId: listing.catalogId,
   });
 }

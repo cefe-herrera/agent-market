@@ -19,7 +19,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as PublicMerchant;
-    if (!body?.agentId || !body?.name || !body?.provider8183) {
+    if (!body?.agentId || !body?.name || !body?.owner || !body?.payTo) {
       return NextResponse.json({ error: "invalid listing" }, { status: 400 });
     }
     const saved = upsertPublicMerchant(body);

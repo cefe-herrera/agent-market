@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CATEGORIES } from "@/app/lib/i18n";
 import { useI18n } from "@/app/context/I18nProvider";
 
@@ -51,7 +52,7 @@ export default function Hero({ stats }: { stats: HeroStats }) {
       <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {CATEGORIES.map((cat) => (
-            <a
+            <Link
               key={cat.id}
               href={cat.href}
               className="card-interactive group cursor-pointer no-underline"
@@ -65,7 +66,7 @@ export default function Hero({ stats }: { stats: HeroStats }) {
               <span className="mt-4 inline-block font-mono-data text-xs text-brand-500">
                 {t("common.explore")} →
               </span>
-            </a>
+            </Link>
           ))}
         </div>
       </section>

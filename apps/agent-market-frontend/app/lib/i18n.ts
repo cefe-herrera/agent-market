@@ -6,17 +6,18 @@ export const LANGUAGES: { code: Lang; label: string }[] = [
 ];
 
 const en: Record<string, string> = {
-  "nav.marketplace": "Marketplace",
-  "nav.rebalancing": "Rebalancing",
-  "nav.gridTrading": "Trading Grid",
+  "nav.marketplace": "Market",
+  "nav.rebalancing": "Rebalance",
+  "nav.gridTrading": "Grid",
   "nav.yield": "Yield",
-  "nav.healthFactor": "Health Factor",
+  "nav.healthFactor": "Health",
   "nav.myAgents": "My Agents",
   "nav.sell": "Sell",
   "sell.badge": "MERCHANT_01",
   "sell.title": "Register a merchant",
   "sell.subtitle":
-    "Mint or link an ERC-8004 identity, deploy your Agent Safe, download the agent key, and publish x402 + 8183 on the Agent Card.",
+    "Mint an ERC-8004 identity now. Agent Safe is optional. When the public URL changes, update the agentURI — do not remint.",
+  "yield.register": "Register ERC-8004 identity",
   "wallet.connect": "Connect Wallet",
   "wallet.connectPrompt":
     "Connect your wallet to view and manage your hired agents.",
@@ -38,7 +39,7 @@ const en: Record<string, string> = {
   "status.COMPLETED": "Completed",
   "status.REJECTED": "Rejected",
   "status.EXPIRED": "Expired",
-  "home.badge": "AGENT MARKETPLACE",
+  "home.badge": "4AGENTS",
   "home.heroLine1": "What do you want",
   "home.heroLine2": "your money to do?",
   "home.subtitle":
@@ -50,7 +51,23 @@ const en: Record<string, string> = {
   "home.featured": "Featured Agents",
   "common.explore": "Explore",
   "marketplace.badge": "DIRECTORY_01",
-  "marketplace.title": "Agent Marketplace",
+  "marketplace.title": "4Agents Marketplace",
+  "yield.badge": "YIELD_01",
+  "yield.title": "Yield Optimisation",
+  "yield.subtitle":
+    "Live Venus / Pancake V3 / Lista snapshot. Gemini follows declared Agent Card skills. Advisory — funds do not move.",
+  "rebalance.badge": "REBALANCE_01",
+  "rebalance.title": "Liquidity Rebalancing",
+  "rebalance.subtitle":
+    "CoinGecko spot and 24h drift for a 50/50 BNB–USDT sleeve. Gemini follows declared Agent Card skills. Advisory — does not recenter LPs.",
+  "grid.badge": "GRID_01",
+  "grid.title": "Grid Trading",
+  "grid.subtitle":
+    "Aster DEX mark, funding and 24h range plus CoinGecko BNB bands. Gemini follows declared Agent Card skills. Advisory — does not place perp orders.",
+  "health.badge": "HEALTH_01",
+  "health.title": "Health Factor",
+  "health.subtitle":
+    "Venus collateral factor and CoinGecko BNB price for a simulated BNB/USDT loan. Gemini follows declared Agent Card skills. Advisory — does not repay.",
   "categoryName.REBALANCING": "Manage Liquidity",
   "categoryName.GRID_TRADING": "Automate Trading",
   "categoryName.YIELD_OPTIMISATION": "Earn Yield",
@@ -64,15 +81,16 @@ const en: Record<string, string> = {
 const es: Record<string, string> = {
   "nav.marketplace": "Mercado",
   "nav.rebalancing": "Rebalanceo",
-  "nav.gridTrading": "Trading Grid",
-  "nav.yield": "Rendimiento",
-  "nav.healthFactor": "Factor de Salud",
+  "nav.gridTrading": "Grid",
+  "nav.yield": "Yield",
+  "nav.healthFactor": "Salud",
   "nav.myAgents": "Mis Agentes",
   "nav.sell": "Vender",
   "sell.badge": "COMERCIANTE_01",
   "sell.title": "Registrar comerciante",
   "sell.subtitle":
-    "Minteá o linkeá una identidad ERC-8004, creá el Agent Safe, descargá la agent key y publicá x402 + 8183 en el Agent Card.",
+    "Minteá la identidad ERC-8004 ahora. El Agent Safe es opcional. Si cambia el dominio, actualizá la agentURI — no re-minteés.",
+  "yield.register": "Registrar identidad ERC-8004",
   "wallet.connect": "Conectar Wallet",
   "wallet.connectPrompt":
     "Conecta tu wallet para ver y gestionar tus agentes contratados.",
@@ -94,7 +112,7 @@ const es: Record<string, string> = {
   "status.COMPLETED": "Completado",
   "status.REJECTED": "Rechazado",
   "status.EXPIRED": "Expirado",
-  "home.badge": "MERCADO DE AGENTES",
+  "home.badge": "4AGENTS",
   "home.heroLine1": "¿Qué quieres que",
   "home.heroLine2": "haga tu dinero?",
   "home.subtitle":
@@ -106,7 +124,23 @@ const es: Record<string, string> = {
   "home.featured": "Agentes Destacados",
   "common.explore": "Explorar",
   "marketplace.badge": "DIRECTORIO_01",
-  "marketplace.title": "Mercado de Agentes",
+  "marketplace.title": "Mercado 4Agents",
+  "yield.badge": "YIELD_01",
+  "yield.title": "Yield Optimisation",
+  "yield.subtitle":
+    "Snapshot live Venus / Pancake V3 / Lista. Gemini sigue las skills del Agent Card. Advisory — no mueve fondos.",
+  "rebalance.badge": "REBALANCE_01",
+  "rebalance.title": "Rebalanceo de liquidez",
+  "rebalance.subtitle":
+    "Spot y drift 24h de CoinGecko para un sleeve 50/50 BNB–USDT. Gemini sigue las skills del Agent Card. Advisory — no recentra LPs.",
+  "grid.badge": "GRID_01",
+  "grid.title": "Grid Trading",
+  "grid.subtitle":
+    "Mark, funding y rango 24h de Aster DEX más bandas CoinGecko de BNB. Gemini sigue las skills del Agent Card. Advisory — no coloca órdenes de perps.",
+  "health.badge": "HEALTH_01",
+  "health.title": "Health Factor",
+  "health.subtitle":
+    "Collateral factor de Venus y precio BNB de CoinGecko para un préstamo simulado BNB/USDT. Gemini sigue las skills del Agent Card. Advisory — no hace repay.",
   "categoryName.REBALANCING": "Gestionar Liquidez",
   "categoryName.GRID_TRADING": "Automatizar Trading",
   "categoryName.YIELD_OPTIMISATION": "Generar Rendimiento",
@@ -124,8 +158,8 @@ const es: Record<string, string> = {
 export const DICTIONARIES: Record<Lang, Record<string, string>> = { en, es };
 
 export const CATEGORIES = [
-  { id: "REBALANCING", href: "#mercado" },
-  { id: "GRID_TRADING", href: "#mercado" },
-  { id: "YIELD_OPTIMISATION", href: "#mercado" },
-  { id: "HEALTH_FACTOR_MONITORING", href: "#mercado" },
+  { id: "YIELD_OPTIMISATION", href: "/yield" },
+  { id: "REBALANCING", href: "/rebalance" },
+  { id: "GRID_TRADING", href: "/grid" },
+  { id: "HEALTH_FACTOR_MONITORING", href: "/health" },
 ] as const;

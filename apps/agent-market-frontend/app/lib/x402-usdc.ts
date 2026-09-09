@@ -88,14 +88,14 @@ export function formatUsdc(atomic: bigint): string {
   return formatUnits(atomic, U_DECIMALS);
 }
 
-export function usdcExactRequirements() {
+export function usdcExactRequirements(payTo?: Address) {
   const cfg = x402PaymentConfig();
   return {
     scheme: X402_SCHEME,
     network: cfg.network,
     amount: X402_AMOUNT_ATOMIC,
     asset: cfg.token,
-    payTo: X402_PAY_TO,
+    payTo: payTo ? getAddress(payTo) : X402_PAY_TO,
     maxTimeoutSeconds: X402_MAX_TIMEOUT_SECONDS,
     extra: {
       name: U_EIP712.name,

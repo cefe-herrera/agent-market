@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AgentMarket — BNB Chain DeFi Agent Marketplace",
+  title: "4Agents — BNB Chain DeFi Agent Marketplace",
   description:
-    "Discover, compare, and activate DeFi agents on BNB Chain with x402 and ERC-8183.",
+    "4Agents — discover and hire DeFi agents on BNB Chain with x402 and ERC-8183.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

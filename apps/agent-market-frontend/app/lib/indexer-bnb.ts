@@ -479,8 +479,8 @@ export async function indexerAgentHealth(id: string): Promise<{
       status: ok ? "healthy" : "unhealthy",
       endpoint,
       error: ok ? null : `HTTP ${res.status}`,
-      skills: agent.verification?.skills ?? [],
-      priceLabel: agent.verification?.priceLabel ?? null,
+      skills: agent?.verification?.skills ?? [],
+      priceLabel: agent?.verification?.priceLabel ?? null,
     };
   } catch (err) {
     return {
@@ -488,8 +488,8 @@ export async function indexerAgentHealth(id: string): Promise<{
       status: "unhealthy",
       endpoint,
       error: err instanceof Error ? err.message : String(err),
-      skills: agent.verification?.skills ?? [],
-      priceLabel: agent.verification?.priceLabel ?? null,
+      skills: agent?.verification?.skills ?? [],
+      priceLabel: agent?.verification?.priceLabel ?? null,
     };
   }
 }

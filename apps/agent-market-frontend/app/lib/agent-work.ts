@@ -1,5 +1,6 @@
 import { getDemoSeller } from "@/app/lib/demo-agents";
-import { geminiAgentName, isGeminiAgentId } from "@/app/lib/gemini/catalog";
+import { geminiAgentName } from "@/app/lib/gemini/catalog";
+import { geminiAgentKind } from "@/app/lib/gemini/ids";
 import { resolveIndexerAgent } from "@/app/lib/indexer-bnb";
 import { X402_NETWORK, X402_PAYMENT_AMOUNT } from "@/app/lib/x402-usdc";
 
@@ -200,7 +201,62 @@ export async function resolvePaidWork(opts: {
   payTo?: string | null;
   settleTx?: string | null;
 }): Promise<AgentWork> {
-  if (isGeminiAgentId(opts.agentId)) {
+  const kind = geminiAgentKind(opts.agentId);
+  if (kind === "health") {
+    const { runHealthGuard } = await import("@/app/lib/gemini/health");
+    const json = await runHealthGuard({
+      payer: opts.payer,
+      capital: "1000",
+    });
+    return {
+      agent: opts.agentName || geminiAgentName(opts.agentId) || "VenusGuard",
+      kind: opts.agentId,
+      source:
+        json.model === "gemini"
+          ? "gemini · health factor · venus"
+          : "gemini fallback · health factor",
+      json,
+      receipt: receipt(opts),
+    };
+  }
+
+  if (kind === "grid") {
+    const { runGridTrader } = await import("@/app/lib/gemini/grid");
+    const json = await runGridTrader({
+      payer: opts.payer,
+      capital: "1000",
+    });
+    return {
+      agent: opts.agentName || geminiAgentName(opts.agentId) || "GridPilot",
+      kind: opts.agentId,
+      source:
+        json.model === "gemini"
+          ? "gemini · grid trading · aster"
+          : "gemini fallback · grid trading",
+      json,
+      receipt: receipt(opts),
+    };
+  }
+
+  if (kind === "rebalance") {
+    const { runRebalancer } = await import("@/app/lib/gemini/rebalance");
+    const json = await runRebalancer({
+      payer: opts.payer,
+      capital: "1000",
+    });
+    return {
+      agent: opts.agentName || geminiAgentName(opts.agentId) || "RangeKeeper",
+      kind: opts.agentId,
+      source:
+        json.model === "gemini"
+          ? "gemini · rebalancing · coingecko"
+          : "gemini fallback · rebalancing",
+      json,
+      receipt: receipt(opts),
+    };
+  }
+
+  if (kind === "yield") {
     const { runYieldOptimiser } = await import("@/app/lib/gemini/yield");
     const json = await runYieldOptimiser({
       payer: opts.payer,

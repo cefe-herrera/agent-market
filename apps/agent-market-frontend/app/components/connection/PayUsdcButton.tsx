@@ -17,14 +17,43 @@ import type { AgentWork } from "@/app/lib/agent-work";
 import { newHireId, rememberHire } from "@/app/lib/hires-store";
 import FeedbackButton from "./FeedbackButton";
 
+export function PayToField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-1 text-xs">
+      <span className="font-mono-data uppercase tracking-wider text-surface-500">
+        to · quién recibe
+      </span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value.trim())}
+        placeholder="0x…"
+        spellCheck={false}
+        className="input-field h-11 text-xs"
+      />
+    </label>
+  );
+}
+
 export default function PayUsdcButton({
   selectedPayTo,
   selectedName,
   selectedAgentId,
+  payToInput: controlledPayTo,
+  onPayToInput,
+  compact = false,
 }: {
   selectedPayTo?: string | null;
   selectedName?: string | null;
   selectedAgentId?: string | null;
+  payToInput?: string;
+  onPayToInput?: (value: string) => void;
+  compact?: boolean;
 }) {
   const { account, walletClient, isConnected, chainId } = useWalletReady();
   const [status, setStatus] = useState<"idle" | "signing" | "settling">(
@@ -33,11 +62,18 @@ export default function PayUsdcButton({
   const [error, setError] = useState<string | null>(null);
   const [tx, setTx] = useState<string | null>(null);
   const [work, setWork] = useState<AgentWork | null>(null);
-  const [payToInput, setPayToInput] = useState(X402_PAY_TO);
+  const [internalPayTo, setInternalPayTo] = useState<string>(X402_PAY_TO);
+  const payToInput = controlledPayTo ?? internalPayTo;
+
+  function setPayToInput(value: string) {
+    if (onPayToInput) onPayToInput(value);
+    else setInternalPayTo(value);
+  }
 
   useEffect(() => {
-    if (selectedPayTo) setPayToInput(selectedPayTo);
-  }, [selectedPayTo]);
+    if (controlledPayTo !== undefined) return;
+    if (selectedPayTo) setInternalPayTo(selectedPayTo);
+  }, [selectedPayTo, controlledPayTo]);
 
   const payTo = useMemo(() => {
     if (!isAddress(payToInput)) return null;
@@ -113,28 +149,14 @@ export default function PayUsdcButton({
   }
 
   return (
-    <div className="mt-8 flex flex-col gap-3">
-      <label className="flex flex-col gap-1 text-xs">
-        <span className="font-mono-data uppercase tracking-wider text-surface-500">
-          to · quién recibe el $U
-          {selectedName ? ` · ${selectedName}` : ""}
-        </span>
-        <input
-          value={payToInput}
-          onChange={(e) => setPayToInput(e.target.value.trim())}
-          placeholder="0x…"
-          spellCheck={false}
-          className="input-field h-11 text-xs"
-        />
-      </label>
-      <p className="font-mono-data text-[11px] text-surface-500">
-        from (pagador) = {account ?? "conectá wallet"}
-      </p>
+    <div className="flex flex-col gap-3">
+      {!compact && (
+        <PayToField value={payToInput} onChange={setPayToInput} />
+      )}
       {selfPay && (
-        <p className="text-xs text-red-400">
-          Estás firmando con la misma cuenta que `to`. Pegá otra wallet
-          receptora — el facilitator solo paga gas, no tiene que ser el
-          destinatario.
+        <p className="hire-warn">
+          `to` no puede ser la wallet que firma. Pegá la cuenta que recibe el
+          $U — el facilitator solo cubre gas.
         </p>
       )}
       <button
@@ -147,12 +169,11 @@ export default function PayUsdcButton({
           ? "Firmá en la wallet…"
           : status === "settling"
             ? "Settling on-chain…"
-            : `Pagar ${X402_PAYMENT_USDC} $U al agente`}
+            : `Contratar y ejecutar (${X402_PAYMENT_USDC} $U)`}
       </button>
       {!ready && !selfPay && (
-        <p className="text-xs text-amber-400">
-          Elegí un agente, conectá la wallet en{" "}
-          {X402_IS_MAINNET ? "BNB Mainnet (56)" : "BNB Testnet (97)"} y poné
+        <p className="font-mono-data text-[11px] leading-5 text-amber-400">
+          Conectá en {X402_IS_MAINNET ? "BNB Chain 56" : "BSC Testnet 97"} y
           un `to` distinto al que firma.
         </p>
       )}

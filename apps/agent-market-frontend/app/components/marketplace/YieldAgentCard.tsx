@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { MarketplaceAgent } from "@/app/lib/agents";
 import type { YieldCardPayload } from "@/app/lib/yield/types";
 import { YIELD_AGENT_ID, YIELD_AGENT_NAME } from "@/app/lib/gemini/ids";
+import { YIELD_SKILLS } from "@/app/lib/gemini/skills";
 
 const FALLBACK_CARD: YieldCardPayload = {
   agent_id: YIELD_AGENT_ID,
@@ -48,6 +49,12 @@ export default function YieldAgentCard({
 }) {
   const [card, setCard] = useState<YieldCardPayload>(FALLBACK_CARD);
   const [error, setError] = useState<string | null>(null);
+  const [health, setHealth] = useState<{
+    healthy?: boolean;
+    status?: string;
+    error?: string | null;
+  } | null>(null);
+  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,10 +81,35 @@ export default function YieldAgentCard({
     };
   }, []);
 
+  async function checkA2a() {
+    setChecking(true);
+    try {
+      const res = await fetch(
+        `/api/marketplace/agents/${encodeURIComponent(agent.agentId)}/a2a-health`,
+        { cache: "no-store" },
+      );
+      setHealth((await res.json()) as { healthy?: boolean; status?: string; error?: string | null });
+    } catch (err) {
+      setHealth({
+        healthy: false,
+        status: "unhealthy",
+        error: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  useEffect(() => {
+    void checkA2a();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agent.agentId]);
+
   const metrics = card?.metrics;
   const lista = card?.sources.lista.quotes[0];
 
   return (
+    <div>
     <button
       type="button"
       onClick={() => onSelect(agent)}
@@ -108,6 +140,11 @@ export default function YieldAgentCard({
         ))}
         <span className="badge-green">x402 $U</span>
         <span className="badge-gray">Gemini</span>
+        {YIELD_SKILLS.map((skill) => (
+          <span key={skill.id} className="badge-gray">
+            {skill.name}
+          </span>
+        ))}
       </div>
       <div className="agent-card-metrics">
         <div>
@@ -152,6 +189,27 @@ export default function YieldAgentCard({
           snapshot fallback · {error}
         </p>
       )}
+      {health && (
+        <p
+          className={`mt-2 font-mono-data text-[11px] ${
+            health.healthy ? "text-brand-500" : "text-red-400"
+          }`}
+        >
+          A2A {health.status}
+          {health.error ? ` · ${health.error}` : ""}
+        </p>
+      )}
     </button>
+    <div className="mt-1 flex justify-end">
+      <button
+        type="button"
+        disabled={checking}
+        onClick={() => void checkA2a()}
+        className="px-2 py-1 font-mono-data text-[11px] text-brand-500 underline disabled:opacity-40"
+      >
+        {checking ? "probing A2A…" : "chequear A2A"}
+      </button>
+    </div>
+    </div>
   );
 }

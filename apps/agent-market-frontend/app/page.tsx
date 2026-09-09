@@ -9,7 +9,7 @@ import { useI18n } from "./context/I18nProvider";
 
 const WalletStatus = dynamic(() => import("./components/connection/WalletStatus"), {
   ssr: false,
-  loading: () => <div className="card h-64 animate-pulse" />,
+  loading: () => null,
 });
 
 export default function Home() {
@@ -26,7 +26,7 @@ export default function Home() {
     <div className="flex-1">
       <Hero stats={stats} />
 
-      <section id="mercado" className="section-dark py-16">
+      <section id="mercado" className="section-dark py-16 pb-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <p className="label-terminal mb-2">// {t("marketplace.badge")}</p>
@@ -35,26 +35,17 @@ export default function Home() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
-            <div className="min-w-0">
-              <AgentCatalog
-                selectedId={selected?.agentId ?? null}
-                onSelect={setSelected}
-                onStats={setStats}
-              />
-            </div>
-            <aside
-              id="hire"
-              className="order-first w-full lg:order-none lg:sticky lg:top-20 lg:self-start"
-            >
-              <WalletStatus
-                selectedPayTo={selected?.agentWallet}
-                selectedName={selected?.name}
-                selectedAgentId={selected?.agentId}
-                selected8183Provider={selected?.erc8183Provider}
-              />
-            </aside>
-          </div>
+          <AgentCatalog
+            selectedId={selected?.agentId ?? null}
+            onSelect={setSelected}
+            onStats={setStats}
+          />
+          <WalletStatus
+            selectedPayTo={selected?.agentWallet}
+            selectedName={selected?.name}
+            selectedAgentId={selected?.agentId}
+            selected8183Provider={selected?.erc8183Provider}
+          />
         </div>
       </section>
     </div>

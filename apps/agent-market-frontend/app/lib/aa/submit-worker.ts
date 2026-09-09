@@ -22,7 +22,7 @@ import {
   readJob,
 } from "@/app/lib/erc8183/read";
 import { JobStatus } from "@/app/lib/erc8183/types";
-import { isGeminiAgentId } from "@/app/lib/gemini/ids";
+import { geminiAgentKind, isRebalanceAgentId, isYieldAgentId, isGridAgentId, isHealthAgentId } from "@/app/lib/gemini/ids";
 import { AGENT_SAFE_SALT_NONCE, agentSafeProvider } from "./addresses";
 import { createSafe7579Client, waitUserOpTx } from "./safe7579";
 import {
@@ -76,13 +76,44 @@ function parseJobMeta(description: string): {
 }
 
 function looksLikeYield(meta: { agentId?: string; task?: string }): boolean {
-  if (isGeminiAgentId(meta.agentId)) return true;
+  const kind = geminiAgentKind(meta.agentId);
+  if (kind && kind !== "yield") return false;
+  if (isYieldAgentId(meta.agentId)) return true;
   const task = meta.task?.toLowerCase() ?? "";
   return (
     task.includes("yield") ||
     task.includes("apr") ||
-    task.includes("venus") ||
     task.includes("optimis")
+  );
+}
+
+function looksLikeRebalance(meta: { agentId?: string; task?: string }): boolean {
+  if (isRebalanceAgentId(meta.agentId)) return true;
+  const task = meta.task?.toLowerCase() ?? "";
+  return (
+    task.includes("rebalance") ||
+    task.includes("lp range") ||
+    task.includes("50/50")
+  );
+}
+
+function looksLikeGrid(meta: { agentId?: string; task?: string }): boolean {
+  if (isGridAgentId(meta.agentId)) return true;
+  const task = meta.task?.toLowerCase() ?? "";
+  return (
+    task.includes("grid") ||
+    task.includes("aster") ||
+    task.includes("perp")
+  );
+}
+
+function looksLikeHealth(meta: { agentId?: string; task?: string }): boolean {
+  if (isHealthAgentId(meta.agentId)) return true;
+  const task = meta.task?.toLowerCase() ?? "";
+  return (
+    task.includes("health factor") ||
+    task.includes("liquidation") ||
+    task.includes("delever")
   );
 }
 
@@ -91,6 +122,75 @@ async function jobPayload(
   description: string,
 ): Promise<{ json: string; deliverable: Hex; optParams: Hex }> {
   const meta = parseJobMeta(description);
+  if (looksLikeHealth(meta)) {
+    const { runHealthGuard } = await import("@/app/lib/gemini/health");
+    const work = await runHealthGuard({
+      task: meta.task,
+      jobId: jobId.toString(),
+      capital: "1000",
+    });
+    const json = JSON.stringify(work);
+    return {
+      json,
+      deliverable: keccak256(toBytes(json)),
+      optParams: toHex(
+        toBytes(
+          JSON.stringify({
+            deliverable_url: "gemini://health",
+            category: "HEALTH_FACTOR_MONITORING",
+            executed: false,
+          }),
+        ),
+      ),
+    };
+  }
+
+  if (looksLikeGrid(meta)) {
+    const { runGridTrader } = await import("@/app/lib/gemini/grid");
+    const work = await runGridTrader({
+      task: meta.task,
+      jobId: jobId.toString(),
+      capital: "1000",
+    });
+    const json = JSON.stringify(work);
+    return {
+      json,
+      deliverable: keccak256(toBytes(json)),
+      optParams: toHex(
+        toBytes(
+          JSON.stringify({
+            deliverable_url: "gemini://grid",
+            category: "GRID_TRADING",
+            executed: false,
+          }),
+        ),
+      ),
+    };
+  }
+
+  if (looksLikeRebalance(meta)) {
+    const { runRebalancer } = await import("@/app/lib/gemini/rebalance");
+    const work = await runRebalancer({
+      task: meta.task,
+      jobId: jobId.toString(),
+      capital: "1000",
+    });
+    const json = JSON.stringify(work);
+    return {
+      json,
+      deliverable: keccak256(toBytes(json)),
+      optParams: toHex(
+        toBytes(
+          JSON.stringify({
+            deliverable_url: "gemini://rebalance",
+            category: "REBALANCING",
+            executed: false,
+          }),
+        ),
+      ),
+    };
+  }
+
   if (looksLikeYield(meta)) {
     const { runYieldOptimiser } = await import("@/app/lib/gemini/yield");
     const work = await runYieldOptimiser({

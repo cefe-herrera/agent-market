@@ -82,7 +82,7 @@ export async function signExactUsdcPayment(
     },
     resource: {
       url: typeof window !== "undefined" ? `${window.location.origin}/` : "/",
-      description: "BNB Agent Market x402 $U exact payment",
+      description: "4Agents x402 $U exact payment",
       mimeType: "application/json",
     },
   };

@@ -25,3 +25,9 @@ export function apiUrl(path: string): string {
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return `${apiOrigin()}${normalized}`;
 }
+
+/** Nest public v1. Do not point x402/Gemini/yield here until Nest serves those rails. */
+export function apiV1(path: string): string {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return apiUrl(`/api/v1${normalized}`);
+}
