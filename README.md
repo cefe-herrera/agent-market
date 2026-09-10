@@ -1,274 +1,148 @@
-# BNB Agent Marketplace
+# 4Agents
 
-A functional POC for a **DeFi Agent Marketplace on BNB Chain**, inspired by the BNB Agent Studio challenge. Discover, compare, evaluate risk, hire, and control automated DeFi agents — all through a modern fintech UX without exposing blockchain complexity.
-
-## What is this?
-
-This project validates the core product experience:
+Marketplace de agentes DeFi en **BNB Chain**. Descubrís un servicio real (ERC-8004), lo contratás con un micropago HTTP (**x402 / $U**) o con un job en escrow (**ERC-8183**), y recibís JSON — no HTML, no OAuth, no un NFT factory disfrazado de agente.
 
 ```
-Discover → Understand → Compare → Evaluate Risk → Hire → Control
+Descubrir → Leer Agent Card → Pagar 0.001 $U (x402) o abrir escrow 8183 → Recibir trabajo
 ```
 
-It is **not** a full blockchain integration yet. Mock providers stand in for ERC-8183 (agent hiring), while **ERC-8004 agent discovery** reads real on-chain registrations via the [8004scan](https://www.8004scan.io) indexer (filtered to agents built with BNB Agent SDK / BNB Agent Studio).
+## El problema
 
-## Architecture
+Hay miles de “agentes” registrados on-chain (ERC-8004). La mayoría es ruido: `Agent #123` de una factory, perfiles humanos, `*.example`, login de Google, o un data-URI que no se puede llamar.
 
-**Modular monolith** — one deployable unit with clear domain boundaries, ready to extract into microservices later.
+Un comprador — humano u **otro agente** — necesita tres cosas que el registry solo no resuelve:
+
+1. **Saber quién es un servicio** (Agent Card, skills, A2A/MCP vivo).
+2. **Pagar sin custodiar** un micropago exacto.
+3. **Abrir un job con escrow** cuando el trabajo dura más que un GET.
+
+4Agents filtra lo consumible, cobra en `$U` y no mezcla los rieles.
+
+## Pitch
+
+BNB Chain ya tiene identidad de agentes (8004). No tiene un mercado donde contratarlos sea tan barato y automático como un HTTP 402.
+
+**x402** es el riel corto: la EOA firma `transferWithAuthorization` (EIP-3009) por **0.001 $U**. El facilitator **solo paga gas BNB** — no se queda con un cut. El `$U` va entero al `payTo`.
+
+**ERC-8183** es el riel largo: Buyer Safe 7579 fondea escrow. El provider es el **Agent Safe**, no el `payTo` de x402. Session key hace `submit`. Skills de Gemini son **política de prompt**, no tools on-chain. `executed=false` hasta que haya un batch 7579.
+
+## Tres rieles (no se mezclan)
+
+| Riel | Qué es | Quién firma |
+|---|---|---|
+| **ERC-8004** | Identidad / catálogo / Agent Card | Owner al mintear |
+| **x402** | Micropago exacto `0.001 $U` | EOA del buyer |
+| **ERC-8183** | Job + escrow `$U` | Buyer Safe 7579 (UserOp) |
+
+## Features
+
+**Catálogo**
+- Indexer Java de ERC-8004 en BSC (mainnet 56 / testnet 97).
+- Filtro *consumible*: Agent Card schema-valid + A2A/MCP llamable. El resto no entra al hire.
+- Probe A2A y preview de card **antes** de pagar.
+
+**Cuatro agentes first-party (Gemini, misma profundidad)**
+- **AlphaYield** (`/yield`) — Venus / Pancake / Lista, sleeve de yield.
+- **RangeKeeper** (`/rebalance`) — rebalanceo con snapshot CoinGecko.
+- **GridPilot** (`/grid`) — bandas en **Aster DEX** perps (GMX no está en BSC).
+- **VenusGuard** (`/health`) — health factor Venus + BNB.
+
+**Pagos**
+- x402 exact `eip155:56` (o 97), asset `$U`, scheme `exact`.
+- ERC-8183 create+fund desde Safe 7579 (Pimlico / ERC-4337).
+- `/sell` — un merchant publica card + `payTo` + opcional Safe 8183.
+
+**Máquinas**
+- Agent Card en `/.well-known/agent-card.json` y `/llms.txt`.
+- GET hire → HTTP 402. POST + `x-agent-id` → JSON de trabajo + receipt.
+
+## Arquitectura
+
+Angular (`apps/web`) **se va**. El producto es Next. Nest es el único que habla con facilitator e indexer.
 
 ```
-bnb-agent-marketplace/
+Browser ──► Next UI :3001   (mismo origen; HTTPS en prod)
+              /api/*  BFF
+                 │
+                 ├─ marketplace / x402 / hire indexer  ──► Nest (HTTP)
+                 │                                            ├─ INDEXER_BNB_URL  :8085
+                 │                                            └─ FACILITATOR_URL  :8080
+                 └─ Gemini yield|grid|health|rebalance
+                    /sell  ·  8183 submit                 (Next, todavía)
+```
+
+Nest es HTTP. Por eso el browser **no** pega a Nest: Next proxea (`NEST_API_URL`, `NEXT_PUBLIC_MARKETPLACE_API`, `NEXT_PUBLIC_HIRE_API`, `NEXT_PUBLIC_X402_SETTLE_API`).
+
+`HiringModule` de Nest sigue mock. El 8183 real vive en Next + Safe 7579.
+
+```
+agent-market/
 ├── apps/
-│   ├── api/          NestJS REST API (modular monolith)
-│   └── web/          Angular 19 SPA
-├── packages/
-│   └── shared-types/ Shared TypeScript types & enums
-├── docker-compose.yml
-└── package.json      npm workspaces root
+│   ├── agent-market-frontend/   Next 16 · 4Agents UI + BFF  (:3001)
+│   ├── api/                     Nest 11 · catálogo v1 + x402 (:3000)
+│   ├── indexer-bnb/             Java · proyección ERC-8004   (:8085)
+│   └── web/                     Angular · legacy, a borrar
+├── x402-rs/                     Facilitator Rust               (:8080)
+├── foundry/                     Contratos / mocks
+└── packages/shared-types/
 ```
 
-### Backend Modules
+## Cómo correr
 
-| Module | Responsibility | Future Service |
-|--------|---------------|----------------|
-| `AgentsModule` | Agent identity & metadata | agent-service |
-| `AnalyticsModule` | Performance metrics | analytics-service |
-| `SecurityModule` | Agent permissions | (part of agent-service) |
-| `MarketplaceModule` | Discovery, filters, compare, scoring | marketplace-service |
-| `HiringModule` | Agent hire/activate/pause/revoke | hiring-service |
-| `BlockchainModule` | Registry & chain abstractions | blockchain-service |
-| `UsersModule` | Wallet-based users (POC) | user-service |
-
-**Cross-module rule:** modules communicate via public services and interfaces — never direct repository access to another module's tables.
-
-### Provider Abstractions
-
-```typescript
-// BlockchainModule — swappable without touching MarketplaceModule
-interface AgentRegistryProvider {
-  getAgents(): Promise<ExternalAgent[]>
-  getAgent(agentId: string): Promise<ExternalAgent>
-  verifyOwnership(agentId: string, wallet: string): Promise<boolean>
-}
-// Current: Erc8004RegistryProvider (8004scan + built_with filter)
-// Fallback: MockAgentRegistryProvider (AGENT_REGISTRY_MODE=mock)
-// Future:  direct on-chain indexer / subgraph
-
-// HiringModule
-interface AgentHiringProvider {
-  hireAgent(...): Promise<HireStatusResult>
-  revokeAgent(hireId: string): Promise<HireStatusResult>
-  getHireStatus(hireId: string): Promise<HireStatusResult>
-}
-// Current: MockAgentHiringProvider
-// Future:  Erc8183HiringProvider
-```
-
-### Domain Events
-
-Internal event bus (NestJS EventEmitter) publishes:
-
-- `AgentDiscovered`, `AgentVerified`, `AgentHired`, `AgentActivated`
-- `AgentPaused`, `AgentRevoked`, `AgentMetricsUpdated`
-
-These can become distributed messages (Kafka, etc.) when services split.
-
-### Marketplace Score
-
-Transparent scoring for agent comparison:
-
-```
-score = performanceScore × 0.25
-      + reliabilityScore × 0.25
-      + riskScore × 0.20
-      + trackRecordScore × 0.15
-      + usageScore × 0.15
-```
-
-See `apps/api/src/modules/marketplace/marketplace-score.calculator.ts`.
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js 20+
-- Docker & Docker Compose
-- npm 10+
-
-### Setup
+Desde la raíz. Indexer (`:8085`) y facilitator (`:8080`) pueden ser los del VPS (`INDEXER_BNB_URL` / `FACILITATOR_URL` en el `.env`).
 
 ```bash
-# 1. Start PostgreSQL
-docker compose up -d
-
-# 2. Install dependencies
-npm install
-
-# 3. Run migrations & seed (24 agents)
-npm run db:migrate
-npm run db:seed
-
-# 4. Start API + Angular (NETWORK from .env, default mainnet)
+# Nest :3000 + Next :3001
 npm run dev:mainnet
-npm run dev:testnet
-
-# Next marketplace (apps/agent-market-frontend :3000)
-npm run dev:front:mainnet
-npm run dev:front:testnet
-
-# 5. x402 facilitator — same GHCR image; NETWORK picks the chain (eip155:56 / 97)
-cd x402-rs
-NETWORK=mainnet docker compose up      # BSC mainnet; signer needs BNB for gas
-# NETWORK=testnet docker compose up    # BSC testnet; signer needs tBNB
 ```
 
-Open [http://localhost:4200](http://localhost:4200)
+Por pieza: `npm run dev:api:mainnet` · `npm run dev:front:mainnet`. Testnet: `npm run dev:testnet`.
 
-### Demo Flow
+UI: [http://localhost:3001](http://localhost:3001)  
+Swagger Nest: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
 
-1. Home → choose **Manage Liquidity** (Rebalancing)
-2. Filter by **PancakeSwap**
-3. Select 3 agents → **Compare**
-4. Open **Pancake LP Guardian** → review performance, risk, permissions
-5. **Hire Agent** → 500 USDT → Activate
-6. **My Agents** → pause or revoke
+Env mínimo:
 
-Demo user wallet: `0xDemoUser1234567890123456789012345678901234`
+| Quién | Variable | Destino |
+|---|---|---|
+| Nest | `INDEXER_BNB_URL` | indexer Java |
+| Nest | `FACILITATOR_URL` | facilitator x402 |
+| Nest | `NETWORK` | `mainnet` \| `testnet` |
+| Next (server) | `NEST_API_URL` | origen Nest (HTTP OK) |
+| Next (server) | `NEXT_PUBLIC_MARKETPLACE_API` | `…/api/v1/marketplace` |
+| Next (server) | `NEXT_PUBLIC_HIRE_API` | `…/api/v1/agent/resource` |
+| Next (server) | `NEXT_PUBLIC_X402_SETTLE_API` | `…/api/v1/x402/settle` |
+| Next (browser) | `NEXT_PUBLIC_BFF_*` | `/api/marketplace`, `/api/agent/resource`, `/api/x402/settle` |
 
-## Data Model
+Gemini y CoinGecko son server-only (`GEMINI_API_KEY`, `COINGECKO_API_KEY`). Nunca `NEXT_PUBLIC_`.
 
-### Agent Categories (equal weight)
+## Rutas UI
 
-- `REBALANCING` — Manage Liquidity
-- `GRID_TRADING` — Automate Trading
-- `YIELD_OPTIMISATION` — Earn Yield
-- `HEALTH_FACTOR_MONITORING` — Protect Loans
+| Ruta | Qué es |
+|---|---|
+| `/` | Mercado (catálogo indexer + Gemini) |
+| `/yield` | AlphaYield |
+| `/rebalance` | RangeKeeper |
+| `/grid` | GridPilot Aster |
+| `/health` | VenusGuard |
+| `/sell` | Publicar merchant 8004 / 8183 |
+| `/my-agents` | Hits x402 + jobs 8183 |
 
-### Key Entities
+## Stack
 
-- **Agent** — identity, strategy, category, protocols, assets, risk
-- **AgentMetrics** — performance + `categoryMetrics` (JSONB) for category-specific KPIs
-- **AgentPermission** — what the agent can/cannot do
-- **AgentHire** — user wallet, capital, status lifecycle
-- **User** — wallet address (no auth in POC)
+| Capa | Tech |
+|---|---|
+| UI | Next 16, React 19, wagmi, RainbowKit, viem |
+| BFF / API | Next route handlers + Nest 11 |
+| Pagos | x402 exact, EIP-3009, `$U` |
+| AA | Safe 7579, permissionless, Pimlico |
+| Catálogo | Indexer Java ERC-8004, PostgreSQL |
+| Cerebro first-party | Gemini (skills = prompt policy) |
 
-## API Endpoints
+## Docs internas
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-| GET | `/agents` | List agents |
-| GET | `/agents/:id` | Agent detail |
-| GET | `/agents/:id/metrics` | Performance metrics |
-| GET | `/agents/:id/permissions` | Permissions |
-| GET | `/agents/:id/chart` | Chart data |
-| GET | `/agents/studio` | Agents published via BNB Agent Studio |
-| POST | `/agents/studio/sync` | Sync from ERC-8004 registry |
-| GET | `/marketplace/agents` | Filtered marketplace listing |
-| GET | `/marketplace/categories` | Category info |
-| GET | `/marketplace/featured` | Featured agents |
-| GET | `/marketplace/compare?agents=id1,id2` | Compare agents |
-| POST | `/hires` | Hire/activate agent |
-| GET | `/hires/:id` | Hire detail |
-| GET | `/hires/user/:wallet` | User's hires |
-| POST | `/hires/:id/pause` | Pause hire |
-| POST | `/hires/:id/revoke` | Revoke hire |
-| GET | `/users/demo` | Demo user wallet |
+- `docs/INFRA-AGENTICA.md` — rieles, Nest, indexer, filtros.
+- `TODO-NEST-CENTRAL.md` — corte híbrido Next → Nest.
+- `apps/TODO-ERC8183.md` — escrow / session key.
 
-Swagger docs: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
-
-### Example Filter Query
-
-```
-GET /marketplace/agents?category=REBALANCING&riskLevel=LOW&protocol=PancakeSwap&sort=highestReturn
-```
-
-## Frontend Routes
-
-| Route | Page |
-|-------|------|
-| `/` | Home / Dashboard |
-| `/agents` | Marketplace |
-| `/agents/rebalancing` | Rebalancing category |
-| `/agents/grid-trading` | Grid Trading category |
-| `/agents/yield` | Yield Optimisation category |
-| `/agents/health-factor` | Health Factor Monitoring category |
-| `/agents/:slug` | Agent detail |
-| `/compare` | Side-by-side comparison |
-| `/my-agents` | Hired agents management |
-
-## Internationalisation (EN / ES)
-
-The UI ships in English and Spanish, switchable at runtime from the header toggle.
-
-- `apps/web/src/app/core/i18n/translations.ts` — flat key/value dictionaries, one per language.
-- `apps/web/src/app/core/i18n/i18n.service.ts` — signal-backed language state, `t(key, params)` lookup, and a matching `locale` used for number and date formatting.
-
-The active language is persisted in `localStorage` and falls back to the browser language on first visit. Because `t()` reads a signal, every template that calls it re-renders when the language changes; no page reload or separate build per locale is needed.
-
-Adding a language means adding a dictionary to `TRANSLATIONS` and an entry to `LANGUAGES`. A unit test asserts both dictionaries expose the same key set, so a missing translation fails the build.
-
-Agent-specific content (names, strategy descriptions, permission descriptions) comes from the database seed and is currently English only. Localising it would mean adding a translations table or per-locale columns to the `Agent` model.
-
-## Seed Data
-
-24 agents (6 per category) with realistic DeFi metrics:
-
-- Pancake LP Guardian, RangePilot, GridAlpha, YieldPilot, Health Guardian, etc.
-- Varied risk levels, AUM, returns, protocols, and permissions
-
-Run manually: `npm run db:seed`
-
-## Testing
-
-```bash
-# Backend unit tests
-npm run test --workspace=@bnb-marketplace/api
-
-# Frontend unit tests
-npm run test --workspace=@bnb-marketplace/web -- --watch=false --browsers=ChromeHeadless
-```
-
-## Future Architecture
-
-When ready to split the modular monolith:
-
-```
-                        API Gateway
-                             │
-          ┌──────────────────┼──────────────────┐
-          │                  │                  │
-     Marketplace          Agents            Hiring
-       Service            Service            Service
-          │                  │                  │
-     Analytics          Blockchain          Users
-       Service            Service           Service
-```
-
-**Migration path per module:**
-
-1. Extract module's controllers → standalone service
-2. Replace in-process service calls with HTTP/gRPC clients
-3. Swap EventEmitter events → message broker (Kafka, RabbitMQ)
-4. Replace mock providers with real chain integrations:
-   - `Erc8004RegistryProvider` for on-chain agent discovery
-   - `Erc8183HiringProvider` for session key / hire transactions
-5. Add wallet authentication to `UsersModule`
-
-**Not included in POC (by design):**
-
-- Kafka, RabbitMQ, service mesh, Kubernetes, API Gateway
-- Real wallet connection, smart contract calls, RPC nodes
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Angular 19, Standalone Components, Signals, Reactive Forms, TailwindCSS |
-| Backend | NestJS 11, Prisma ORM, PostgreSQL, Swagger |
-| Infra | Docker Compose (PostgreSQL only) |
-| Monorepo | npm workspaces |
-
-## License
-
-MIT — POC for demonstration purposes.
+MIT — hackathon BNB Chain / Agent Studio.
