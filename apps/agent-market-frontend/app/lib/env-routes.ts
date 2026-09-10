@@ -1,11 +1,12 @@
 /** Same-origin Next BFF paths (NEXT_PUBLIC_BFF_*). Nest URLs live in NEXT_PUBLIC_MARKETPLACE_API / HIRE / X402_SETTLE. */
 
-function publicPath(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) {
+/** Next inlines only literal process.env.NEXT_PUBLIC_* — not process.env[name]. */
+function requirePublicPath(value: string | undefined, name: string): string {
+  const trimmed = value?.trim();
+  if (!trimmed) {
     throw new Error(`Missing ${name} in env`);
   }
-  return value.replace(/\/$/, "") || value;
+  return trimmed.replace(/\/$/, "") || trimmed;
 }
 
 function join(base: string, ...parts: string[]): string {
@@ -18,43 +19,73 @@ function join(base: string, ...parts: string[]): string {
 }
 
 export function marketplaceApiBase(): string {
-  return publicPath("NEXT_PUBLIC_BFF_MARKETPLACE");
+  return requirePublicPath(
+    process.env.NEXT_PUBLIC_BFF_MARKETPLACE,
+    "NEXT_PUBLIC_BFF_MARKETPLACE",
+  );
 }
 
 export function hireApiPath(): string {
-  return publicPath("NEXT_PUBLIC_BFF_HIRE");
+  return requirePublicPath(
+    process.env.NEXT_PUBLIC_BFF_HIRE,
+    "NEXT_PUBLIC_BFF_HIRE",
+  );
 }
 
 export function x402SettleApiPath(): string {
-  return publicPath("NEXT_PUBLIC_BFF_X402_SETTLE");
+  return requirePublicPath(
+    process.env.NEXT_PUBLIC_BFF_X402_SETTLE,
+    "NEXT_PUBLIC_BFF_X402_SETTLE",
+  );
 }
 
 export function agentCardApiBase(): string {
-  return publicPath("NEXT_PUBLIC_AGENT_CARD_API");
+  return requirePublicPath(
+    process.env.NEXT_PUBLIC_AGENT_CARD_API,
+    "NEXT_PUBLIC_AGENT_CARD_API",
+  );
 }
 
 export function agentYieldApiPath(): string {
-  return publicPath("NEXT_PUBLIC_AGENT_YIELD_API");
+  return requirePublicPath(
+    process.env.NEXT_PUBLIC_AGENT_YIELD_API,
+    "NEXT_PUBLIC_AGENT_YIELD_API",
+  );
 }
 
 export function agentRebalanceApiPath(): string {
-  return publicPath("NEXT_PUBLIC_AGENT_REBALANCE_API");
+  return requirePublicPath(
+    process.env.NEXT_PUBLIC_AGENT_REBALANCE_API,
+    "NEXT_PUBLIC_AGENT_REBALANCE_API",
+  );
 }
 
 export function agentGridApiPath(): string {
-  return publicPath("NEXT_PUBLIC_AGENT_GRID_API");
+  return requirePublicPath(
+    process.env.NEXT_PUBLIC_AGENT_GRID_API,
+    "NEXT_PUBLIC_AGENT_GRID_API",
+  );
 }
 
 export function agentHealthApiPath(): string {
-  return publicPath("NEXT_PUBLIC_AGENT_HEALTH_API");
+  return requirePublicPath(
+    process.env.NEXT_PUBLIC_AGENT_HEALTH_API,
+    "NEXT_PUBLIC_AGENT_HEALTH_API",
+  );
 }
 
 export function agent8183SubmitApiPath(): string {
-  return publicPath("NEXT_PUBLIC_AGENT_8183_SUBMIT_API");
+  return requirePublicPath(
+    process.env.NEXT_PUBLIC_AGENT_8183_SUBMIT_API,
+    "NEXT_PUBLIC_AGENT_8183_SUBMIT_API",
+  );
 }
 
 export function merchantCardApiBase(): string {
-  return publicPath("NEXT_PUBLIC_MERCHANT_CARD_API");
+  return requirePublicPath(
+    process.env.NEXT_PUBLIC_MERCHANT_CARD_API,
+    "NEXT_PUBLIC_MERCHANT_CARD_API",
+  );
 }
 
 export function merchantCardPath(agentId: string): string {
@@ -62,7 +93,10 @@ export function merchantCardPath(agentId: string): string {
 }
 
 export function merchantApiBase(): string {
-  return publicPath("NEXT_PUBLIC_MERCHANT_API");
+  return requirePublicPath(
+    process.env.NEXT_PUBLIC_MERCHANT_API,
+    "NEXT_PUBLIC_MERCHANT_API",
+  );
 }
 
 export function merchantApiPath(search = ""): string {
