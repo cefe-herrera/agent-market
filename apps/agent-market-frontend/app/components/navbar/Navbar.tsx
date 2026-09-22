@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Logo from "@/app/components/brand/Logo";
 import { useI18n } from "@/app/context/I18nProvider";
 import LanguageSwitcher from "./LanguageSwitcher";
 
@@ -31,11 +32,7 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-surface-300 bg-surface-50/90 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[90rem] items-center gap-4 px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="shrink-0 no-underline" aria-label="4Agents">
-          <span className="font-pixel text-lg text-brand-500 glow-accent">
-            4<span className="text-surface-950">Agents</span>
-          </span>
-        </Link>
+        <Logo className="text-brand-500" />
 
         <nav className="hidden items-center gap-4 lg:flex">
           {NAV.map((item) => {

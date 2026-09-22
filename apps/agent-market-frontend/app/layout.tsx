@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "4Agents — BNB Chain DeFi Agent Marketplace",
+  title: "agent — BNB Chain DeFi Agent Marketplace",
   description:
-    "4Agents — discover and hire DeFi agents on BNB Chain with x402 and ERC-8183.",
+    "agent — discover and hire DeFi agents on BNB Chain with x402 and ERC-8183.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -26,6 +26,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
     >
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){window.addEventListener("unhandledrejection",function(e){var r=e.reason,m=r&&r.message?r.message:String(r||"");if(m.indexOf("has not been authorized yet")!==-1)e.preventDefault();});})();`,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"

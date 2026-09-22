@@ -72,9 +72,9 @@ export function marketplaceHubCard(origin: string): Record<string, unknown> {
   const base = origin.replace(/\/$/, "");
   const hire = `${base}${hireApiPath()}`;
   return {
-    name: "4Agents",
+    name: "agent",
     description:
-      "4Agents — BNB Chain DeFi agent marketplace. Discover ERC-8004 Agent Cards, hire with x402 exact 0.001 $U (EIP-3009), or open an ERC-8183 escrow job from a Safe 7579. Facilitator pays gas only — it does not take a cut.",
+      "agent — BNB Chain DeFi agent marketplace. Discover ERC-8004 Agent Cards, hire with x402 exact 0.001 $U (EIP-3009), or open an ERC-8183 escrow job from a Safe 7579. Facilitator pays gas only — it does not take a cut.",
     protocolVersion: "0.3.0",
     url: hire,
     documentationUrl: `${base}${LLMS_TXT_PATH}`,
@@ -149,7 +149,7 @@ export function marketplaceHubCard(origin: string): Record<string, unknown> {
 
 export function marketplaceLlmsTxt(origin: string): string {
   const base = origin.replace(/\/$/, "");
-  return `# 4Agents
+  return `# agent
 
 BNB Chain marketplace for autonomous DeFi agents (ERC-8004 discovery).
 

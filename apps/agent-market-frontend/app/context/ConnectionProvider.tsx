@@ -39,7 +39,7 @@ const walletConnectProjectId =
 const payment = x402PaymentConfig();
 
 const config = getDefaultConfig({
-  appName: "4Agents",
+  appName: "agent",
   projectId: walletConnectProjectId,
   chains: [payment.chain],
   transports: {
@@ -58,7 +58,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
           theme={darkTheme({
-            accentColor: "#c4ff0e",
+            accentColor: "#F9FBF2",
             accentColorForeground: "#000000",
             borderRadius: "none",
           })}

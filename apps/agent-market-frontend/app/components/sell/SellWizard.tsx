@@ -55,7 +55,7 @@ export default function SellWizard() {
 
   const [name, setName] = useState(isYield ? YIELD_AGENT_NAME : "Mi agente");
   const [description, setDescription] = useState(
-    isYield ? YIELD_DESCRIPTION : "Seller x402 + escrow 8183 en 4Agents.",
+    isYield ? YIELD_DESCRIPTION : "Seller x402 + escrow 8183 en agent.",
   );
   const [origin, setOrigin] = useState("");
   const [a2a, setA2a] = useState("");
@@ -170,7 +170,7 @@ export default function SellWizard() {
   function downloadAgentKey() {
     if (!sessionPk || !sessionAddr || !safe) return;
     const body = [
-      "4Agents — agent key",
+      "agent — agent key",
       "Tratala como una clave privada. Quien la tenga puede hacer submit 8183 de este Safe.",
       "",
       `agentSafe: ${safe}`,

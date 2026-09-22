@@ -39,7 +39,7 @@ const en: Record<string, string> = {
   "status.COMPLETED": "Completed",
   "status.REJECTED": "Rejected",
   "status.EXPIRED": "Expired",
-  "home.badge": "4AGENTS",
+  "home.badge": "AGENT",
   "home.heroLine1": "What do you want",
   "home.heroLine2": "your money to do?",
   "home.subtitle":
@@ -51,7 +51,7 @@ const en: Record<string, string> = {
   "home.featured": "Featured Agents",
   "common.explore": "Explore",
   "marketplace.badge": "DIRECTORY_01",
-  "marketplace.title": "4Agents Marketplace",
+  "marketplace.title": "agent Marketplace",
   "yield.badge": "YIELD_01",
   "yield.title": "Yield Optimisation",
   "yield.subtitle":
@@ -112,7 +112,7 @@ const es: Record<string, string> = {
   "status.COMPLETED": "Completado",
   "status.REJECTED": "Rechazado",
   "status.EXPIRED": "Expirado",
-  "home.badge": "4AGENTS",
+  "home.badge": "AGENT",
   "home.heroLine1": "¿Qué quieres que",
   "home.heroLine2": "haga tu dinero?",
   "home.subtitle":
@@ -124,7 +124,7 @@ const es: Record<string, string> = {
   "home.featured": "Agentes Destacados",
   "common.explore": "Explorar",
   "marketplace.badge": "DIRECTORIO_01",
-  "marketplace.title": "Mercado 4Agents",
+  "marketplace.title": "Mercado agent",
   "yield.badge": "YIELD_01",
   "yield.title": "Yield Optimisation",
   "yield.subtitle":
