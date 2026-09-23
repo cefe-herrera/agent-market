@@ -18,7 +18,7 @@ export default function SellPage() {
       <h1 className="mb-2 font-pixel text-2xl text-surface-950">
         {t("sell.title")}
       </h1>
-      <p className="mb-8 font-mono-data text-sm text-surface-500">
+      <p className="prose-body mb-8 text-sm">
         {t("sell.subtitle")}
       </p>
       <div className="mb-6">

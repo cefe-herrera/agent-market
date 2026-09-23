@@ -68,14 +68,12 @@ export default function YieldPage() {
 
   return (
     <div className="flex-1">
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <section className="page-section">
         <p className="label-terminal mb-3">// {t("yield.badge")}</p>
         <h1 className="font-pixel-square text-2xl text-surface-950">
           {t("yield.title")}
         </h1>
-        <p className="mt-3 max-w-2xl font-mono-data text-sm text-surface-500">
-          {t("yield.subtitle")}
-        </p>
+        <p className="page-hero-subtitle">{t("yield.subtitle")}</p>
         <p className="mt-4 font-mono-data text-sm">
           {tokenId ? (
             <span className="text-brand-500">

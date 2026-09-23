@@ -16,7 +16,7 @@ const erc20BalanceOf = {
   outputs: [{ type: "uint256" }],
 } as const;
 
-export default function ConnectWallet() {
+export default function ConnectWallet({ primary = false }: { primary?: boolean }) {
   const { account } = useWalletReady();
   const { t } = useI18n();
   const [mounted, setMounted] = useState(false);
@@ -62,11 +62,18 @@ export default function ConnectWallet() {
       <ConnectButton.Custom>
         {({ account: rkAccount, openAccountModal, openConnectModal, mounted: rkMounted }) => {
           if (!rkMounted) return null;
+          const connectedClass = primary
+            ? "btn-ghost whitespace-nowrap !px-3 !py-1.5 text-xs !border-brand-500/40 !text-brand-500"
+            : "btn-secondary whitespace-nowrap !px-3 !py-1.5 text-xs";
+          const disconnectedClass = primary
+            ? "btn-primary whitespace-nowrap !px-3 !py-1.5 text-xs"
+            : "btn-primary whitespace-nowrap !px-3 !py-1.5 text-xs";
+
           if (!rkAccount) {
             return (
               <button
                 type="button"
-                className="btn-primary whitespace-nowrap !px-3 !py-1.5 text-xs"
+                className={disconnectedClass}
                 onClick={openConnectModal}
               >
                 {t("wallet.connect")}
@@ -76,7 +83,7 @@ export default function ConnectWallet() {
           return (
             <button
               type="button"
-              className="btn-secondary whitespace-nowrap !px-3 !py-1.5 text-xs"
+              className={connectedClass}
               onClick={openAccountModal}
             >
               {rkAccount.displayName}

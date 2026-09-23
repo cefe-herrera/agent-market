@@ -23,14 +23,12 @@ export default function HealthPage() {
 
   return (
     <div className="flex-1">
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <section className="page-section">
         <p className="label-terminal mb-3">// {t("health.badge")}</p>
         <h1 className="font-pixel-square text-2xl text-surface-950">
           {t("health.title")}
         </h1>
-        <p className="mt-3 max-w-2xl font-mono-data text-sm text-surface-500">
-          {t("health.subtitle")}
-        </p>
+        <p className="page-hero-subtitle">{t("health.subtitle")}</p>
       </section>
 
       <section className="section-dark py-16 pb-32">

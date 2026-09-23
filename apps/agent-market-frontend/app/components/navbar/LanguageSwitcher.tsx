@@ -5,28 +5,16 @@ import { useI18n } from "@/app/context/I18nProvider";
 
 export default function LanguageSwitcher() {
   const { lang, setLang } = useI18n();
+  const other = LANGUAGES.find((option) => option.code !== lang) ?? LANGUAGES[0];
 
   return (
-    <div
-      className="inline-flex overflow-hidden border border-surface-300"
-      role="group"
-      aria-label="Language"
+    <button
+      type="button"
+      aria-label={`Language: ${lang.toUpperCase()}`}
+      onClick={() => setLang(other.code)}
+      className="px-1.5 py-1 font-mono-data text-[10px] uppercase tracking-wider text-surface-500 transition hover:text-brand-500"
     >
-      {LANGUAGES.map((option) => (
-        <button
-          key={option.code}
-          type="button"
-          aria-pressed={lang === option.code}
-          onClick={() => setLang(option.code)}
-          className={`px-2.5 py-1 font-mono-data text-xs font-medium transition ${
-            lang === option.code
-              ? "bg-brand-500 text-black"
-              : "bg-surface-100 text-surface-600"
-          }`}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
+      {lang.toUpperCase()}
+    </button>
   );
 }

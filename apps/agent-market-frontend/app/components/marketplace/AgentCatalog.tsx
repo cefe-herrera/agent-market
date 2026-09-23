@@ -29,7 +29,6 @@ import HealthAgentCard from "./HealthAgentCard";
 import { loadLocalMerchants } from "@/app/lib/merchant/client-store";
 import { mergeCatalogWithMerchants } from "@/app/lib/merchant/to-catalog";
 import { X402_PAYMENT_USDC } from "@/app/lib/x402-usdc";
-import type { HeroStats } from "@/app/components/home/Hero";
 
 const DEMO_AGENTS = demoMarketplaceAgents();
 
@@ -45,11 +44,11 @@ type A2aHealth = {
 export default function AgentCatalog({
   selectedId,
   onSelect,
-  onStats,
+  focusAgentId,
 }: {
   selectedId: string | null;
   onSelect: (agent: MarketplaceAgent) => void;
-  onStats?: (stats: HeroStats) => void;
+  focusAgentId?: string | null;
 }) {
   const [agents, setAgents] = useState<MarketplaceAgent[]>([]);
   const [total, setTotal] = useState(0);
@@ -152,12 +151,6 @@ export default function AgentCatalog({
           setTotal(total);
           setRegistered(registered);
           setFilteredOut(filteredOut);
-          onStats?.({
-            agents: withMine.length,
-            categories: 4,
-            chains: 1,
-            verified: withMine.filter((agent) => agent.verified).length,
-          });
         }
       } catch (err) {
         if (!cancelled) {
@@ -172,6 +165,26 @@ export default function AgentCatalog({
       cancelled = true;
     };
   }, [isTestnet, network]);
+
+  useEffect(() => {
+    if (!focusAgentId || loading) return;
+    const catalogAgents = [
+      ...geminiAgents,
+      ...agents,
+      ...(isTestnet ? DEMO_AGENTS : []),
+    ];
+    const agent = catalogAgents.find(
+      (item) => item.agentId === focusAgentId,
+    );
+    if (!agent) return;
+    onSelect(agent);
+    const timer = window.setTimeout(() => {
+      document
+        .getElementById(`agent-${focusAgentId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [focusAgentId, loading, geminiAgents, agents, isTestnet, onSelect]);
 
   async function expandOpenCatalog() {
     setExpanding(true);
@@ -259,7 +272,7 @@ export default function AgentCatalog({
           <h3 className="mt-2 font-pixel-square text-xl text-surface-950">
             Agentes
           </h3>
-          <p className="mt-2 max-w-2xl font-mono-data text-sm text-surface-500">
+          <p className="prose-body mt-2 max-w-2xl text-sm">
             {isTestnet
               ? "Registered (ERC-8004) → consumible (A2A/MCP invocable). Factories Termix, perfiles EvoEvo y OAuth no entran."
               : "Solo BNB Chain (56). Consumible = Agent Card con A2A/MCP de máquina. Termix .agent, EvoEvo web y placeholders quedan afuera."}
@@ -270,7 +283,7 @@ export default function AgentCatalog({
       <h2 className="mt-8 font-mono-data text-xs uppercase tracking-wider text-brand-500">
         Rebalancing
       </h2>
-      <p className="mt-2 max-w-2xl font-mono-data text-sm text-surface-500">
+      <p className="prose-body mt-2 max-w-2xl text-sm">
         Snapshot CoinGecko: spot USD, 24h drift, banda high/low para un sleeve
         50/50 BNB–USDT. Hire x402; el batch 7579 queda como trigger, no
         recentra LPs.
@@ -279,7 +292,11 @@ export default function AgentCatalog({
         {geminiAgents
           .filter((agent) => isRebalanceAgentId(agent.agentId))
           .map((agent) => (
-            <li key={agent.agentId} className="min-w-0 max-w-full">
+            <li
+              key={agent.agentId}
+              id={`agent-${agent.agentId}`}
+              className="min-w-0 max-w-full scroll-mt-24"
+            >
               <RebalanceAgentCard
                 agent={agent}
                 selected={selectedId === agent.agentId}
@@ -292,7 +309,7 @@ export default function AgentCatalog({
       <h2 className="mt-8 font-mono-data text-xs uppercase tracking-wider text-brand-500">
         Yield Optimisation
       </h2>
-      <p className="mt-2 max-w-2xl font-mono-data text-sm text-surface-500">
+      <p className="prose-body mt-2 max-w-2xl text-sm">
         Snapshot live: Venus supply APY, PancakeSwap V3 fee APR (volumen
         GeckoTerminal), Lista slisBNB simulado 7–11%. Hire x402; el batch
         7579 queda como trigger, no ejecuta fondos.
@@ -301,7 +318,11 @@ export default function AgentCatalog({
         {geminiAgents
           .filter((agent) => isYieldAgentId(agent.agentId))
           .map((agent) => (
-            <li key={agent.agentId} className="min-w-0 max-w-full">
+            <li
+              key={agent.agentId}
+              id={`agent-${agent.agentId}`}
+              className="min-w-0 max-w-full scroll-mt-24"
+            >
               <YieldAgentCard
                 agent={agent}
                 selected={selectedId === agent.agentId}
@@ -314,7 +335,7 @@ export default function AgentCatalog({
       <h2 className="mt-8 font-mono-data text-xs uppercase tracking-wider text-brand-500">
         Grid Trading
       </h2>
-      <p className="mt-2 max-w-2xl font-mono-data text-sm text-surface-500">
+      <p className="prose-body mt-2 max-w-2xl text-sm">
         Snapshot Aster DEX: mark, funding 8h, rango 24h. Bandas CoinGecko
         high/low para un grid BNB/USDT. Hire x402; el batch 7579 queda como
         trigger, no coloca órdenes de perps.
@@ -323,7 +344,11 @@ export default function AgentCatalog({
         {geminiAgents
           .filter((agent) => isGridAgentId(agent.agentId))
           .map((agent) => (
-            <li key={agent.agentId} className="min-w-0 max-w-full">
+            <li
+              key={agent.agentId}
+              id={`agent-${agent.agentId}`}
+              className="min-w-0 max-w-full scroll-mt-24"
+            >
               <GridAgentCard
                 agent={agent}
                 selected={selectedId === agent.agentId}
@@ -336,7 +361,7 @@ export default function AgentCatalog({
       <h2 className="mt-8 font-mono-data text-xs uppercase tracking-wider text-brand-500">
         Health Factor
       </h2>
-      <p className="mt-2 max-w-2xl font-mono-data text-sm text-surface-500">
+      <p className="prose-body mt-2 max-w-2xl text-sm">
         Snapshot Venus: collateral factor y borrow APY. Precio BNB de CoinGecko
         para un sleeve simulado BNB/USDT. Hire x402; el batch 7579 queda como
         trigger, no hace repay.
@@ -345,7 +370,11 @@ export default function AgentCatalog({
         {geminiAgents
           .filter((agent) => isHealthAgentId(agent.agentId))
           .map((agent) => (
-            <li key={agent.agentId} className="min-w-0 max-w-full">
+            <li
+              key={agent.agentId}
+              id={`agent-${agent.agentId}`}
+              className="min-w-0 max-w-full scroll-mt-24"
+            >
               <HealthAgentCard
                 agent={agent}
                 selected={selectedId === agent.agentId}
@@ -505,7 +534,11 @@ function AgentList({
           (protocol) => !["mcp", "a2a", "erc-8004"].includes(protocol.toLowerCase()),
         );
         return (
-          <li key={agent.agentId} className="min-w-0 max-w-full">
+          <li
+            key={agent.agentId}
+            id={`agent-${agent.agentId}`}
+            className="min-w-0 max-w-full scroll-mt-24"
+          >
             <button
               type="button"
               onClick={() => onSelect(agent)}

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import Logo from "@/app/components/brand/Logo";
 import { useI18n } from "@/app/context/I18nProvider";
 import LanguageSwitcher from "./LanguageSwitcher";
+import MobileNav from "./MobileNav";
 
 const ConnectWallet = dynamic(() => import("../connection/ConnectWallet"), {
   ssr: false,
@@ -31,8 +32,9 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-surface-300 bg-surface-50/90 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-[90rem] items-center gap-4 px-4 sm:px-6 lg:px-8">
-        <Logo className="text-brand-500" />
+      <div className="relative mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:gap-4 lg:px-8">
+        <MobileNav />
+        <Logo />
 
         <nav className="hidden items-center gap-4 lg:flex">
           {NAV.map((item) => {
@@ -54,21 +56,21 @@ export default function Navbar() {
           })}
         </nav>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           <LanguageSwitcher />
-          <ConnectWallet />
-          <Link
-            href="/sell"
-            className={`btn-secondary whitespace-nowrap !px-3 !py-1.5 text-xs ${onSell ? "bg-brand-400/20" : ""}`}
-          >
-            {t("nav.sell")}
-          </Link>
           <Link
             href="/my-agents"
-            className={`btn-primary whitespace-nowrap !px-3 !py-1.5 text-xs ${onMyAgents ? "bg-brand-400" : ""}`}
+            className={`btn-ghost hidden whitespace-nowrap !px-3 !py-1.5 text-xs lg:inline-flex ${onMyAgents ? "!border-brand-500/50 !text-brand-500" : ""}`}
           >
             {t("nav.myAgents")}
           </Link>
+          <Link
+            href="/sell"
+            className={`btn-ghost hidden whitespace-nowrap !px-3 !py-1.5 text-xs lg:inline-flex ${onSell ? "!border-brand-500/50 !text-brand-500" : ""}`}
+          >
+            {t("nav.publishAgent")}
+          </Link>
+          <ConnectWallet primary />
         </div>
       </div>
     </header>
